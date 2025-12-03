@@ -20,6 +20,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans, DBSCAN
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 # ============================================================
 # 설정
@@ -88,7 +89,8 @@ def get_venue_score(row) -> float:
             return 4.0
 
     # CHI는 EA가 아니면 1티어 (위에서 EA 이미 걸러짐)
-    if "chi" in text_to_check:
+    # "human factors in computing systems" 또는 "sigchi"로 정확히 매칭
+    if "human factors in computing systems" in text_to_check or "sigchi" in text_to_check:
         return 5.0
 
     return 2.5  # 기본값
@@ -264,7 +266,33 @@ def main():
     kmeans = KMeans(n_clusters=args.clusters, random_state=42, n_init=10)
     df["cluster"] = kmeans.fit_predict(combined)
 
-    # 6. JSON 출력
+    # 6. 클러스터 라벨 생성 (TF-IDF 키워드)
+    print("\nGenerating cluster labels...")
+    cluster_texts = {}
+    for idx, row in df.iterrows():
+        c = int(row["cluster"])
+        text = f"{row.get('Title', '')} {row.get('Abstract Note', '')}"
+        cluster_texts[c] = cluster_texts.get(c, "") + " " + str(text)
+
+    corpus = [cluster_texts.get(i, "") for i in range(args.clusters)]
+    tfidf_vec = TfidfVectorizer(
+        max_features=500,
+        stop_words='english',
+        ngram_range=(1, 2),
+        min_df=1
+    )
+    tfidf_matrix = tfidf_vec.fit_transform(corpus)
+    feature_names = tfidf_vec.get_feature_names_out()
+
+    cluster_labels = {}
+    for i in range(args.clusters):
+        scores = tfidf_matrix[i].toarray().flatten()
+        top_idx = scores.argsort()[-3:][::-1]  # 상위 3개 키워드
+        keywords = [feature_names[j] for j in top_idx]
+        cluster_labels[i] = ", ".join(keywords)
+        print(f"  Cluster {i}: {cluster_labels[i]}")
+
+    # 7. JSON 출력
     print(f"\nWriting {args.output}...")
     records = []
     for idx, row in df.iterrows():
@@ -280,6 +308,7 @@ def main():
             "x": float(row["x"]),
             "y": float(row["y"]),
             "cluster": int(row["cluster"]),
+            "cluster_label": cluster_labels.get(int(row["cluster"]), ""),
             "url": str(row.get("Url", "") or ""),
             "doi": str(row.get("DOI", "") or ""),
             "abstract": str(row.get("Abstract Note", "") or "")[:500],  # 길이 제한

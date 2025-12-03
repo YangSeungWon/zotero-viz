@@ -244,13 +244,15 @@
         const resp = await fetch('papers.json');
         allPapers = await resp.json();
 
-        // Populate cluster filter
+        // Populate cluster filter with labels
         const clusters = [...new Set(allPapers.map(p => p.cluster))].sort((a,b) => a-b);
         const clusterSelect = document.getElementById('clusterFilter');
         clusters.forEach(c => {
+          const sample = allPapers.find(p => p.cluster === c);
+          const label = sample?.cluster_label || '';
           const opt = document.createElement('option');
           opt.value = c;
-          opt.textContent = `Cluster ${c}`;
+          opt.textContent = `${c}: ${label}`;
           clusterSelect.appendChild(opt);
         });
 
@@ -299,7 +301,7 @@
         text: paperItems.map(p =>
           `<b>${p.title}</b><br>` +
           `${p.venue || 'N/A'} (${p.year || 'N/A'})<br>` +
-          `Cluster ${p.cluster}`
+          `Cluster ${p.cluster}: ${p.cluster_label || ''}`
         ),
         customdata: paperItems,
         mode: 'markers',
@@ -321,7 +323,7 @@
         text: appItems.map(p =>
           `<b>${p.title}</b><br>` +
           `App/Service<br>` +
-          `Cluster ${p.cluster}`
+          `Cluster ${p.cluster}: ${p.cluster_label || ''}`
         ),
         customdata: appItems,
         mode: 'markers',
@@ -387,7 +389,7 @@
 
       document.getElementById('detailMeta').innerHTML = `
         <span class="badge ${typeClass}">${typeLabel}</span>
-        <span class="badge cluster">Cluster ${item.cluster}</span>
+        <span class="badge cluster">Cluster ${item.cluster}: ${item.cluster_label || ''}</span>
         <br><br>
         <span><strong>Year:</strong> ${item.year || 'N/A'}</span>
         <span><strong>Venue:</strong> ${item.venue || 'N/A'}</span>
