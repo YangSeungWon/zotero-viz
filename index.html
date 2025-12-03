@@ -6,11 +6,40 @@
   <title>Paper Map</title>
   <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
   <style>
+    /* Theme variables */
+    :root {
+      --bg-primary: #0d1117;
+      --bg-secondary: #161b22;
+      --bg-tertiary: #21262d;
+      --border-color: #30363d;
+      --text-primary: #f0f6fc;
+      --text-secondary: #c9d1d9;
+      --text-muted: #8b949e;
+      --accent: #58a6ff;
+      --plot-bg: #0d1117;
+      --plot-grid: #21262d;
+      --plot-zero: #30363d;
+    }
+
+    [data-theme="light"] {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f6f8fa;
+      --bg-tertiary: #eaeef2;
+      --border-color: #d0d7de;
+      --text-primary: #1f2328;
+      --text-secondary: #424a53;
+      --text-muted: #656d76;
+      --accent: #0969da;
+      --plot-bg: #ffffff;
+      --plot-grid: #eaeef2;
+      --plot-zero: #d0d7de;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #0d1117;
-      color: #c9d1d9;
+      background: var(--bg-primary);
+      color: var(--text-secondary);
       height: 100vh;
       display: flex;
       flex-direction: column;
@@ -19,8 +48,8 @@
     /* Header */
     header {
       padding: 12px 20px;
-      background: #161b22;
-      border-bottom: 1px solid #30363d;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
       display: flex;
       align-items: center;
       gap: 20px;
@@ -29,11 +58,11 @@
     header h1 {
       font-size: 18px;
       font-weight: 600;
-      color: #f0f6fc;
+      color: var(--text-primary);
     }
     .stats {
       font-size: 13px;
-      color: #8b949e;
+      color: var(--text-muted);
     }
 
     /* Controls */
@@ -51,12 +80,12 @@
     }
     .control-group label {
       font-size: 12px;
-      color: #8b949e;
+      color: var(--text-muted);
     }
-    input[type="number"], select {
-      background: #21262d;
-      border: 1px solid #30363d;
-      color: #c9d1d9;
+    input[type="number"], select, input[type="text"] {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
       padding: 4px 8px;
       border-radius: 4px;
       font-size: 12px;
@@ -64,7 +93,7 @@
     }
     select { width: auto; }
     input[type="checkbox"] {
-      accent-color: #58a6ff;
+      accent-color: var(--accent);
     }
     button {
       background: #238636;
@@ -76,6 +105,20 @@
       cursor: pointer;
     }
     button:hover { background: #2ea043; }
+
+    /* Theme toggle */
+    .theme-toggle {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .theme-toggle:hover {
+      background: var(--border-color);
+    }
 
     /* Main content */
     .main-content {
@@ -94,8 +137,8 @@
     .detail-panel {
       width: 0;
       min-width: 0;
-      background: #161b22;
-      border-left: 1px solid #30363d;
+      background: var(--bg-secondary);
+      border-left: 1px solid var(--border-color);
       overflow-y: auto;
       overflow-x: hidden;
       padding: 0;
@@ -108,13 +151,13 @@
     .detail-panel h2 {
       font-size: 15px;
       font-weight: 600;
-      color: #f0f6fc;
+      color: var(--text-primary);
       margin-bottom: 12px;
       line-height: 1.4;
     }
     .detail-panel .meta {
       font-size: 12px;
-      color: #8b949e;
+      color: var(--text-muted);
       margin-bottom: 8px;
     }
     .detail-panel .meta span {
@@ -131,22 +174,22 @@
     .badge.paper { background: #388bfd33; color: #58a6ff; }
     .badge.app { background: #a371f733; color: #bc8cff; }
     .badge.cluster {
-      background: #30363d;
-      color: #c9d1d9;
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
     }
     .detail-panel .abstract {
       font-size: 13px;
       line-height: 1.6;
-      color: #8b949e;
+      color: var(--text-muted);
       margin-top: 12px;
       padding-top: 12px;
-      border-top: 1px solid #30363d;
+      border-top: 1px solid var(--border-color);
     }
     .detail-panel .links {
       margin-top: 12px;
     }
     .detail-panel .links a {
-      color: #58a6ff;
+      color: var(--accent);
       font-size: 12px;
       text-decoration: none;
       margin-right: 12px;
@@ -155,12 +198,12 @@
     .detail-panel .similar-papers {
       margin-top: 16px;
       padding-top: 12px;
-      border-top: 1px solid #30363d;
+      border-top: 1px solid var(--border-color);
     }
     .detail-panel .similar-papers h3 {
       font-size: 13px;
       font-weight: 600;
-      color: #8b949e;
+      color: var(--text-muted);
       margin-bottom: 8px;
     }
     .detail-panel .similar-papers ul {
@@ -171,15 +214,15 @@
     .detail-panel .similar-papers li {
       font-size: 12px;
       padding: 6px 0;
-      border-bottom: 1px solid #21262d;
+      border-bottom: 1px solid var(--bg-tertiary);
       cursor: pointer;
-      color: #c9d1d9;
+      color: var(--text-secondary);
     }
     .detail-panel .similar-papers li:hover {
-      color: #58a6ff;
+      color: var(--accent);
     }
     .detail-panel .similar-papers .year {
-      color: #8b949e;
+      color: var(--text-muted);
       font-size: 11px;
     }
 
@@ -188,7 +231,7 @@
       display: flex;
       gap: 16px;
       font-size: 12px;
-      color: #8b949e;
+      color: var(--text-muted);
     }
     .legend-item {
       display: flex;
@@ -211,6 +254,7 @@
 <body>
   <header>
     <h1>Paper Map</h1>
+    <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
     <div class="stats" id="stats">Loading...</div>
     <div class="legend">
       <div class="legend-item">
@@ -429,23 +473,30 @@
         hovertemplate: '%{text}<extra></extra>'
       };
 
+      const isLight = document.documentElement.dataset.theme === 'light';
+      const colors = isLight ? {
+        bg: '#ffffff', grid: '#eaeef2', zero: '#d0d7de', text: '#656d76'
+      } : {
+        bg: '#0d1117', grid: '#21262d', zero: '#30363d', text: '#8b949e'
+      };
+
       const layout = {
         margin: { l: 40, r: 20, t: 20, b: 40 },
-        paper_bgcolor: '#0d1117',
-        plot_bgcolor: '#0d1117',
+        paper_bgcolor: colors.bg,
+        plot_bgcolor: colors.bg,
         xaxis: {
           title: '',
           showgrid: true,
-          gridcolor: '#21262d',
-          zerolinecolor: '#30363d',
-          tickfont: { color: '#8b949e' }
+          gridcolor: colors.grid,
+          zerolinecolor: colors.zero,
+          tickfont: { color: colors.text }
         },
         yaxis: {
           title: '',
           showgrid: true,
-          gridcolor: '#21262d',
-          zerolinecolor: '#30363d',
-          tickfont: { color: '#8b949e' }
+          gridcolor: colors.grid,
+          zerolinecolor: colors.zero,
+          tickfont: { color: colors.text }
         },
         showlegend: false,
         hovermode: 'closest'
@@ -625,6 +676,23 @@
       document.getElementById('stats').textContent +=
         ` | Intersection: C${c1} ↔ C${c2}`;
     });
+
+    // Theme toggle
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const html = document.documentElement;
+      const isLight = html.dataset.theme === 'light';
+      html.dataset.theme = isLight ? '' : 'light';
+      document.getElementById('themeToggle').textContent = isLight ? '🌙' : '☀️';
+      localStorage.setItem('theme', html.dataset.theme);
+      render(currentFiltered);
+    });
+
+    // Load saved theme
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') {
+      document.documentElement.dataset.theme = 'light';
+      document.getElementById('themeToggle').textContent = '☀️';
+    }
 
     // Load data
     loadData();
