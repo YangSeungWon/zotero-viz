@@ -1,0 +1,301 @@
+#!/usr/bin/env python3
+"""
+Zotero Paper Map Builder
+- CSV에서 논문 데이터 로드
+- 텍스트 임베딩 (sentence-transformers 또는 OpenAI)
+- 메타데이터 기반 가중치
+- 차원 축소 + 클러스터링
+- JSON 출력
+"""
+
+import pandas as pd
+import numpy as np
+import json
+import re
+import math
+import argparse
+from pathlib import Path
+from bs4 import BeautifulSoup
+from sklearn.preprocessing import StandardScaler
+from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA
+from sklearn.cluster import KMeans, DBSCAN
+
+# ============================================================
+# 설정
+# ============================================================
+
+# Venue quality 점수 (1-5)
+# 1티어 (5): CHI full, UIST, IMWUT, TOCHI, JCMC, IJHCS
+# 2티어 (4): CSCW/PACM HCI, DIS, MobileHCI
+# 3티어 (3): CHI EA, TEI, 워크샵/포스터
+# 기본값: 2.5
+
+VENUE_TIER1 = ["uist", "imwut", "tochi", "trans. comput.-hum. interact",
+               "journal of computer-mediated communication", "jcmc",
+               "human-computer studies", "ijhcs"]
+VENUE_TIER2 = ["cscw", "proc. acm hum.-comput. interact", "acm hum.-comput. interact",
+               "dis", "mobilehci", "iui"]
+VENUE_TIER3 = ["extended abstract", "chi ea", "tei", "workshop", "poster"]
+
+# Item type 점수
+TYPE_SCORE = {
+    "journalArticle": 3,
+    "conferencePaper": 3,
+    "bookSection": 2,
+    "preprint": 2,
+    "book": 2,
+    "webpage": 1,  # 앱/서비스
+    "blogPost": 1,
+}
+
+CURRENT_YEAR = 2025
+
+# ============================================================
+# 유틸리티 함수
+# ============================================================
+
+def extract_text_from_html(html_content: str) -> str:
+    """HTML에서 텍스트만 추출"""
+    if pd.isna(html_content) or not html_content:
+        return ""
+    soup = BeautifulSoup(html_content, "html.parser")
+    return soup.get_text(separator="\n", strip=True)
+
+
+def get_venue_score(row) -> float:
+    """venue quality 점수 계산"""
+    # Publication Title, Conference Name, Series 등에서 검색
+    text_to_check = " ".join([
+        str(row.get("Publication Title", "")),
+        str(row.get("Conference Name", "")),
+        str(row.get("Series", "")),
+    ]).lower()
+
+    # 3티어 먼저 체크 (CHI EA, workshop 등)
+    for keyword in VENUE_TIER3:
+        if keyword in text_to_check:
+            return 3.0
+
+    # 1티어 체크
+    for keyword in VENUE_TIER1:
+        if keyword in text_to_check:
+            return 5.0
+
+    # 2티어 체크
+    for keyword in VENUE_TIER2:
+        if keyword in text_to_check:
+            return 4.0
+
+    # CHI는 EA가 아니면 1티어 (위에서 EA 이미 걸러짐)
+    if "chi" in text_to_check:
+        return 5.0
+
+    return 2.5  # 기본값
+
+
+def get_type_score(item_type: str) -> float:
+    """item type 점수"""
+    if pd.isna(item_type):
+        return 2
+    return TYPE_SCORE.get(item_type, 2)
+
+
+def parse_year(year_val) -> int:
+    """연도 파싱"""
+    try:
+        year = int(float(year_val))
+        if 1900 < year <= CURRENT_YEAR:
+            return year
+    except:
+        pass
+    return None
+
+
+def build_text_for_embedding(row) -> str:
+    """임베딩용 텍스트 생성 (Title + Abstract + Notes)"""
+    parts = []
+
+    # Title
+    title = row.get("Title", "")
+    if pd.notna(title) and title:
+        parts.append(f"Title: {title}")
+
+    # Abstract
+    abstract = row.get("Abstract Note", "")
+    if pd.notna(abstract) and abstract:
+        parts.append(f"Abstract: {abstract}")
+
+    # Notes (HTML -> text)
+    notes = row.get("Notes", "")
+    if pd.notna(notes) and notes:
+        notes_text = extract_text_from_html(notes)
+        if notes_text:
+            parts.append(f"Notes: {notes_text}")
+
+    return "\n\n".join(parts)
+
+
+# ============================================================
+# 임베딩 함수
+# ============================================================
+
+def embed_with_sentence_transformers(texts: list, model_name: str = "all-MiniLM-L6-v2") -> np.ndarray:
+    """sentence-transformers로 임베딩"""
+    from sentence_transformers import SentenceTransformer
+
+    print(f"Loading model: {model_name}")
+    model = SentenceTransformer(model_name)
+
+    print(f"Embedding {len(texts)} texts...")
+    embeddings = model.encode(texts, show_progress_bar=True)
+    return np.array(embeddings)
+
+
+def embed_with_openai(texts: list, model: str = "text-embedding-3-small") -> np.ndarray:
+    """OpenAI API로 임베딩"""
+    import openai
+
+    print(f"Embedding {len(texts)} texts with OpenAI {model}...")
+    embeddings = []
+
+    # 배치 처리 (API 제한 고려)
+    batch_size = 100
+    for i in range(0, len(texts), batch_size):
+        batch = texts[i:i+batch_size]
+        # 텍스트 길이 제한 (8000자)
+        batch = [t[:8000] if t else " " for t in batch]
+
+        resp = openai.embeddings.create(model=model, input=batch)
+        for item in resp.data:
+            embeddings.append(item.embedding)
+
+        print(f"  Processed {min(i+batch_size, len(texts))}/{len(texts)}")
+
+    return np.array(embeddings)
+
+
+# ============================================================
+# 메인 로직
+# ============================================================
+
+def main():
+    parser = argparse.ArgumentParser(description="Build paper map from Zotero CSV")
+    parser.add_argument("--input", default="semantel.csv", help="Input CSV file")
+    parser.add_argument("--output", default="papers.json", help="Output JSON file")
+    parser.add_argument("--embedding", choices=["local", "openai"], default="local",
+                        help="Embedding method: local (sentence-transformers) or openai")
+    parser.add_argument("--clusters", type=int, default=10, help="Number of clusters")
+    parser.add_argument("--dim-reduction", choices=["tsne", "pca"], default="tsne",
+                        help="Dimensionality reduction method")
+    args = parser.parse_args()
+
+    # 1. CSV 로드
+    print(f"\n[1/5] Loading {args.input}...")
+    df = pd.read_csv(args.input)
+    print(f"  Loaded {len(df)} items")
+
+    # 2. 메타데이터 처리
+    print("\n[2/5] Processing metadata...")
+    df["year_clean"] = df["Publication Year"].apply(parse_year)
+    df["age"] = df["year_clean"].apply(lambda y: CURRENT_YEAR - y if y else None)
+    median_age = df["age"].median()
+    df["age"] = df["age"].fillna(median_age)
+
+    df["venue_quality"] = df.apply(get_venue_score, axis=1)
+    df["type_score"] = df["Item Type"].apply(get_type_score)
+
+    # is_paper 플래그 (논문 vs 앱/서비스)
+    df["is_paper"] = df["Item Type"].isin(["conferencePaper", "journalArticle", "bookSection", "preprint", "book"])
+
+    print(f"  Papers: {df['is_paper'].sum()}, Apps/Services: {(~df['is_paper']).sum()}")
+
+    # 3. 텍스트 임베딩
+    print("\n[3/5] Building embeddings...")
+    texts = [build_text_for_embedding(row) for _, row in df.iterrows()]
+
+    if args.embedding == "local":
+        embeddings = embed_with_sentence_transformers(texts)
+    else:
+        embeddings = embed_with_openai(texts)
+
+    print(f"  Embedding shape: {embeddings.shape}")
+
+    # 4. 메타데이터 feature 결합
+    print("\n[4/5] Combining features and reducing dimensions...")
+    meta_features = df[["venue_quality", "type_score", "age"]].values
+
+    # 스케일링
+    scaler = StandardScaler()
+    meta_scaled = scaler.fit_transform(meta_features)
+
+    # 가중치 적용 (venue, type, age)
+    weights = np.array([1.5, 1.0, 0.5])
+    meta_scaled = meta_scaled * weights
+
+    # 임베딩 + 메타데이터 결합
+    # 임베딩도 스케일링
+    emb_scaler = StandardScaler()
+    emb_scaled = emb_scaler.fit_transform(embeddings)
+
+    # 메타데이터 비중 조절 (임베딩 대비 0.3 정도)
+    combined = np.hstack([emb_scaled, meta_scaled * 0.3])
+
+    # 차원 축소
+    if args.dim_reduction == "tsne":
+        # t-SNE는 고차원에서 바로 하면 느리므로 PCA로 먼저 축소
+        if combined.shape[1] > 50:
+            pca = PCA(n_components=50, random_state=42)
+            combined_reduced = pca.fit_transform(combined)
+        else:
+            combined_reduced = combined
+
+        tsne = TSNE(n_components=2, random_state=42, perplexity=min(30, len(df)-1))
+        coords = tsne.fit_transform(combined_reduced)
+    else:
+        pca = PCA(n_components=2, random_state=42)
+        coords = pca.fit_transform(combined)
+
+    df["x"] = coords[:, 0]
+    df["y"] = coords[:, 1]
+
+    # 5. 클러스터링
+    print(f"\n[5/5] Clustering into {args.clusters} clusters...")
+    kmeans = KMeans(n_clusters=args.clusters, random_state=42, n_init=10)
+    df["cluster"] = kmeans.fit_predict(combined)
+
+    # 6. JSON 출력
+    print(f"\nWriting {args.output}...")
+    records = []
+    for idx, row in df.iterrows():
+        rec = {
+            "id": int(idx),
+            "title": str(row.get("Title", "") or ""),
+            "year": int(row["year_clean"]) if pd.notna(row["year_clean"]) else None,
+            "authors": str(row.get("Author", "") or ""),
+            "venue": str(row.get("Publication Title", "") or ""),
+            "item_type": str(row.get("Item Type", "") or ""),
+            "is_paper": bool(row["is_paper"]),
+            "venue_quality": float(row["venue_quality"]),
+            "x": float(row["x"]),
+            "y": float(row["y"]),
+            "cluster": int(row["cluster"]),
+            "url": str(row.get("Url", "") or ""),
+            "doi": str(row.get("DOI", "") or ""),
+            "abstract": str(row.get("Abstract Note", "") or "")[:500],  # 길이 제한
+            "tags": str(row.get("Manual Tags", "") or ""),
+            "has_notes": bool(pd.notna(row.get("Notes")) and len(str(row.get("Notes", ""))) > 50),
+        }
+        records.append(rec)
+
+    with open(args.output, "w", encoding="utf-8") as f:
+        json.dump(records, f, ensure_ascii=False, indent=2)
+
+    print(f"\n✅ Done! Generated {args.output} with {len(records)} items")
+    print(f"   - Papers: {sum(1 for r in records if r['is_paper'])}")
+    print(f"   - Apps/Services: {sum(1 for r in records if not r['is_paper'])}")
+    print(f"   - Clusters: {args.clusters}")
+
+
+if __name__ == "__main__":
+    main()
