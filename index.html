@@ -437,6 +437,10 @@
     .cluster-item .label {
       flex: 1;
       line-height: 1.3;
+      cursor: text;
+    }
+    .cluster-item .label:hover {
+      text-decoration: underline dotted;
     }
     .cluster-item .count {
       color: var(--text-muted);
@@ -743,6 +747,10 @@
           allPapers = data;
         }
 
+        // 로컬 스토리지에서 커스텀 라벨 로드
+        const customLabels = JSON.parse(localStorage.getItem('customClusterLabels') || '{}');
+        Object.assign(clusterLabels, customLabels);
+
         // Populate tag filter
         const tagFilterEl = document.getElementById('tagFilter');
         const allTags = new Set();
@@ -791,7 +799,7 @@
           item.dataset.cluster = c;
           item.innerHTML = `
             <div class="dot" style="background: ${CLUSTER_COLORS[c % CLUSTER_COLORS.length]}"></div>
-            <div class="label">${label || 'Cluster ' + c}</div>
+            <div class="label" title="더블클릭으로 편집">${label || 'Cluster ' + c}</div>
             <div class="count">${count}</div>
           `;
           item.addEventListener('click', () => {
@@ -805,6 +813,27 @@
             }
             render(currentFiltered);
           });
+
+          // 더블클릭으로 라벨 편집
+          const labelEl = item.querySelector('.label');
+          labelEl.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            const currentLabel = clusterLabels[c] || '';
+            const newLabel = prompt(`클러스터 ${c} 라벨 편집:`, currentLabel);
+            if (newLabel !== null && newLabel !== currentLabel) {
+              clusterLabels[c] = newLabel;
+              labelEl.textContent = newLabel || 'Cluster ' + c;
+              // 로컬 스토리지에 저장
+              const customLabels = JSON.parse(localStorage.getItem('customClusterLabels') || '{}');
+              customLabels[c] = newLabel;
+              localStorage.setItem('customClusterLabels', JSON.stringify(customLabels));
+              // 논문 데이터의 cluster_label도 업데이트
+              allPapers.forEach(p => {
+                if (p.cluster === c) p.cluster_label = newLabel;
+              });
+            }
+          });
+
           clusterListEl.appendChild(item);
         });
 
