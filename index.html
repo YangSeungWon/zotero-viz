@@ -1922,6 +1922,93 @@
       }
     });
 
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      // 입력 필드에서는 단축키 비활성화
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') {
+        if (e.key === 'Escape') {
+          e.target.blur();
+        }
+        return;
+      }
+
+      switch (e.key) {
+        case 'Escape':
+          // 모달 닫기 우선
+          if (missingModal.classList.contains('active')) {
+            missingModal.classList.remove('active');
+          } else if (statsTooltip) {
+            statsTooltip.remove();
+            statsTooltip = null;
+          } else if (selectedPaper) {
+            clearSelection();
+          }
+          break;
+
+        case '/':
+          // 검색창 포커스
+          e.preventDefault();
+          document.getElementById('searchFilter').focus();
+          break;
+
+        case 'j':
+        case 'J':
+          // 다음 논문 (선택된 상태에서)
+          if (selectedPaper && currentFiltered.length > 0) {
+            const currentIdx = currentFiltered.findIndex(p => p.id === selectedPaper.id);
+            const nextIdx = (currentIdx + 1) % currentFiltered.length;
+            showDetail(currentFiltered[nextIdx]);
+          } else if (currentFiltered.length > 0) {
+            showDetail(currentFiltered[0]);
+          }
+          break;
+
+        case 'k':
+        case 'K':
+          // 이전 논문
+          if (selectedPaper && currentFiltered.length > 0) {
+            const currentIdx = currentFiltered.findIndex(p => p.id === selectedPaper.id);
+            const prevIdx = (currentIdx - 1 + currentFiltered.length) % currentFiltered.length;
+            showDetail(currentFiltered[prevIdx]);
+          } else if (currentFiltered.length > 0) {
+            showDetail(currentFiltered[currentFiltered.length - 1]);
+          }
+          break;
+
+        case 'r':
+        case 'R':
+          // 필터 리셋
+          if (!e.ctrlKey && !e.metaKey) {
+            document.getElementById('resetFilter').click();
+          }
+          break;
+
+        case 'c':
+        case 'C':
+          // Citation 토글
+          if (!e.ctrlKey && !e.metaKey) {
+            const checkbox = document.getElementById('showCitations');
+            checkbox.checked = !checkbox.checked;
+            showCitations = checkbox.checked;
+            render(currentFiltered);
+          }
+          break;
+
+        case '?':
+          // 단축키 도움말
+          alert(`⌨️ Keyboard Shortcuts
+
+/     검색창 포커스
+Esc   선택 해제 / 모달 닫기
+J     다음 논문
+K     이전 논문
+R     필터 리셋
+C     Citation 선 토글
+?     이 도움말`);
+          break;
+      }
+    });
+
     // Load data
     loadData();
   </script>
