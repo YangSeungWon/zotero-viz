@@ -31278,5 +31278,12 @@
       "source": 235,
       "target": 213
     }
-  ]
+  ],
+  "meta": {
+    "csv_updated": "2025-12-04 15:14",
+    "map_built": "2025-12-04 16:12",
+    "total_papers": 233,
+    "total_apps": 9,
+    "clusters": 10
+  }
 }
