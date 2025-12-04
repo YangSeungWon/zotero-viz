@@ -446,6 +446,69 @@
       color: var(--text-muted);
       font-size: 11px;
     }
+    .cluster-item .stats-btn {
+      opacity: 0;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 2px 4px;
+      font-size: 10px;
+      border-radius: 3px;
+      transition: opacity 0.15s;
+    }
+    .cluster-item:hover .stats-btn {
+      opacity: 1;
+    }
+    .cluster-item .stats-btn:hover {
+      background: var(--bg-tertiary);
+      color: var(--accent);
+    }
+
+    /* Cluster stats tooltip */
+    .cluster-stats-tooltip {
+      position: fixed;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 12px;
+      z-index: 1000;
+      min-width: 200px;
+      max-width: 280px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .cluster-stats-tooltip h4 {
+      margin: 0 0 8px 0;
+      font-size: 13px;
+      color: var(--text-primary);
+    }
+    .cluster-stats-tooltip .stat-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      border-bottom: 1px solid var(--bg-tertiary);
+    }
+    .cluster-stats-tooltip .stat-row:last-child {
+      border-bottom: none;
+    }
+    .cluster-stats-tooltip .stat-label {
+      color: var(--text-muted);
+    }
+    .cluster-stats-tooltip .stat-value {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+    .cluster-stats-tooltip .top-venues {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-color);
+    }
+    .cluster-stats-tooltip .venue-item {
+      font-size: 11px;
+      color: var(--text-secondary);
+      padding: 2px 0;
+    }
 
     /* Filter status */
     .filter-status {
@@ -801,7 +864,15 @@
             <div class="dot" style="background: ${CLUSTER_COLORS[c % CLUSTER_COLORS.length]}"></div>
             <div class="label" title="더블클릭으로 편집">${label || 'Cluster ' + c}</div>
             <div class="count">${count}</div>
+            <button class="stats-btn" title="클러스터 통계">📊</button>
           `;
+
+          // 통계 버튼 클릭
+          item.querySelector('.stats-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            showClusterStats(c, e);
+          });
+
           item.addEventListener('click', () => {
             if (highlightCluster === c) {
               highlightCluster = null;
@@ -1304,6 +1375,108 @@
         }))
         .sort((a, b) => a.distance - b.distance)
         .slice(0, n);
+    }
+
+    // 클러스터 통계 표시
+    let statsTooltip = null;
+    function showClusterStats(clusterId, event) {
+      // 기존 툴팁 제거
+      if (statsTooltip) {
+        statsTooltip.remove();
+        statsTooltip = null;
+      }
+
+      const papers = allPapers.filter(p => p.cluster === clusterId);
+      if (papers.length === 0) return;
+
+      // 통계 계산
+      const years = papers.map(p => p.year).filter(y => y);
+      const citations = papers.map(p => p.citation_count).filter(c => c !== null && c !== undefined);
+      const venues = {};
+      papers.forEach(p => {
+        if (p.venue) {
+          const v = p.venue.substring(0, 30);
+          venues[v] = (venues[v] || 0) + 1;
+        }
+      });
+      const topVenues = Object.entries(venues)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3);
+
+      const minYear = years.length ? Math.min(...years) : 'N/A';
+      const maxYear = years.length ? Math.max(...years) : 'N/A';
+      const avgYear = years.length ? Math.round(years.reduce((a, b) => a + b, 0) / years.length) : 'N/A';
+      const avgCitations = citations.length ? Math.round(citations.reduce((a, b) => a + b, 0) / citations.length) : 'N/A';
+      const maxCitations = citations.length ? Math.max(...citations) : 'N/A';
+      const withNotes = papers.filter(p => p.has_notes).length;
+
+      // 툴팁 생성
+      statsTooltip = document.createElement('div');
+      statsTooltip.className = 'cluster-stats-tooltip';
+      statsTooltip.innerHTML = `
+        <h4>📊 Cluster ${clusterId}: ${clusterLabels[clusterId] || ''}</h4>
+        <div class="stat-row">
+          <span class="stat-label">논문 수</span>
+          <span class="stat-value">${papers.length}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">연도 범위</span>
+          <span class="stat-value">${minYear} - ${maxYear}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">평균 연도</span>
+          <span class="stat-value">${avgYear}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">평균 인용수</span>
+          <span class="stat-value">${avgCitations}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">최대 인용수</span>
+          <span class="stat-value">${maxCitations}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">노트 있음</span>
+          <span class="stat-value">${withNotes} / ${papers.length}</span>
+        </div>
+        ${topVenues.length > 0 ? `
+          <div class="top-venues">
+            <span class="stat-label">주요 Venues:</span>
+            ${topVenues.map(([v, c]) => `<div class="venue-item">• ${v} (${c})</div>`).join('')}
+          </div>
+        ` : ''}
+      `;
+
+      document.body.appendChild(statsTooltip);
+
+      // 위치 설정
+      const rect = event.target.getBoundingClientRect();
+      let left = rect.right + 10;
+      let top = rect.top;
+
+      // 화면 밖으로 나가면 조정
+      if (left + 280 > window.innerWidth) {
+        left = rect.left - 290;
+      }
+      if (top + 300 > window.innerHeight) {
+        top = window.innerHeight - 310;
+      }
+
+      statsTooltip.style.left = left + 'px';
+      statsTooltip.style.top = top + 'px';
+
+      // 외부 클릭 시 닫기
+      setTimeout(() => {
+        document.addEventListener('click', closeStatsTooltip);
+      }, 10);
+    }
+
+    function closeStatsTooltip(e) {
+      if (statsTooltip && !statsTooltip.contains(e.target)) {
+        statsTooltip.remove();
+        statsTooltip = null;
+        document.removeEventListener('click', closeStatsTooltip);
+      }
     }
 
     function findIntersectionPapers(cluster1, cluster2, threshold = 0.3) {
