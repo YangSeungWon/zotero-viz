@@ -280,6 +280,51 @@
       font-size: 11px;
     }
 
+    /* Citation sections */
+    .citation-section {
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-color);
+    }
+    .citation-section h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .citation-section h3 .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .citation-section ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .citation-section li {
+      font-size: 12px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--bg-tertiary);
+      cursor: pointer;
+      color: var(--text-secondary);
+    }
+    .citation-section li:hover {
+      color: var(--accent);
+    }
+    .citation-section .year {
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+    .citation-section .empty {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
     /* Legend */
     .legend {
       display: flex;
@@ -560,7 +605,8 @@
     <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
     <div class="stats" id="stats">Loading...</div>
     <span class="filter-status" id="filterStatus"></span>
-    <button class="missing-btn" id="showMissing" title="Papers frequently cited but not in library">📚 Missing</button>
+    <button class="missing-btn" id="showClassics" title="많이 인용된 기초 논문" style="color: #58a6ff;">📚 Classics</button>
+    <button class="missing-btn" id="showNewWork" title="내 논문을 인용하는 최신작" style="color: #f97316;">🆕 New</button>
     <div class="legend">
       <div class="legend-item">
         <div class="legend-dot" style="background: #58a6ff;"></div>
@@ -569,6 +615,14 @@
       <div class="legend-item">
         <div class="legend-diamond"></div>
         <span>Apps/Services</span>
+      </div>
+      <div class="legend-item">
+        <div style="width: 20px; height: 2px; background: #58a6ff;"></div>
+        <span>References</span>
+      </div>
+      <div class="legend-item">
+        <div style="width: 20px; height: 2px; background: #f97316;"></div>
+        <span>Cited by</span>
       </div>
     </div>
     <div class="controls">
@@ -639,6 +693,8 @@
       <div class="links" id="detailLinks"></div>
       <div class="abstract" id="detailAbstract"></div>
       <div id="detailNotes"></div>
+      <div class="citation-section" id="referencesSection"></div>
+      <div class="citation-section" id="citedBySection"></div>
       <div class="similar-papers" id="similarPapers"></div>
     </div>
   </div>
@@ -947,31 +1003,94 @@
 
       if (showCitations && citationLinks.length > 0) {
         // 현재 필터된 논문들의 ID 맵
-        const filteredIds = new Set(papers.map(p => p.id));
+        const visibleIds = new Set(papers.map(p => p.id));
         const idToPos = {};
         papers.forEach(p => { idToPos[p.id] = { x: p.x, y: p.y }; });
 
         // 필터된 논문들 사이의 인용 관계만 표시
         const relevantLinks = citationLinks.filter(
-          link => filteredIds.has(link.source) && filteredIds.has(link.target)
+          link => visibleIds.has(link.source) && visibleIds.has(link.target)
         );
 
-        // 각 링크를 선으로 그리기
-        relevantLinks.forEach(link => {
-          const source = idToPos[link.source];
-          const target = idToPos[link.target];
-          if (source && target) {
-            traces.push({
-              x: [source.x, target.x],
-              y: [source.y, target.y],
-              mode: 'lines',
-              type: 'scatter',
-              line: { color: 'rgba(255, 165, 0, 0.3)', width: 1 },
-              hoverinfo: 'none',
-              showlegend: false
-            });
-          }
-        });
+        // 선택된 논문이 있으면 관련 링크만 색상 구분
+        if (selectedPaper !== null) {
+          // References (내가 인용한 것) - 파란색
+          const refLinks = relevantLinks.filter(link => link.source === selectedPaper.id);
+          // Cited by (나를 인용한 것) - 주황색
+          const citedByLinks = relevantLinks.filter(link => link.target === selectedPaper.id);
+          // 나머지 - 회색
+          const otherLinks = relevantLinks.filter(
+            link => link.source !== selectedPaper.id && link.target !== selectedPaper.id
+          );
+
+          // 나머지 링크 (희미하게)
+          otherLinks.forEach(link => {
+            const source = idToPos[link.source];
+            const target = idToPos[link.target];
+            if (source && target) {
+              traces.push({
+                x: [source.x, target.x],
+                y: [source.y, target.y],
+                mode: 'lines',
+                type: 'scatter',
+                line: { color: 'rgba(128, 128, 128, 0.1)', width: 1 },
+                hoverinfo: 'none',
+                showlegend: false
+              });
+            }
+          });
+
+          // References (파란색, 두껍게)
+          refLinks.forEach(link => {
+            const source = idToPos[link.source];
+            const target = idToPos[link.target];
+            if (source && target) {
+              traces.push({
+                x: [source.x, target.x],
+                y: [source.y, target.y],
+                mode: 'lines',
+                type: 'scatter',
+                line: { color: 'rgba(88, 166, 255, 0.8)', width: 2 },
+                hoverinfo: 'none',
+                showlegend: false
+              });
+            }
+          });
+
+          // Cited by (주황색, 두껍게)
+          citedByLinks.forEach(link => {
+            const source = idToPos[link.source];
+            const target = idToPos[link.target];
+            if (source && target) {
+              traces.push({
+                x: [source.x, target.x],
+                y: [source.y, target.y],
+                mode: 'lines',
+                type: 'scatter',
+                line: { color: 'rgba(249, 115, 22, 0.8)', width: 2 },
+                hoverinfo: 'none',
+                showlegend: false
+              });
+            }
+          });
+        } else {
+          // 선택 없으면 전체 표시 (기존 색상)
+          relevantLinks.forEach(link => {
+            const source = idToPos[link.source];
+            const target = idToPos[link.target];
+            if (source && target) {
+              traces.push({
+                x: [source.x, target.x],
+                y: [source.y, target.y],
+                mode: 'lines',
+                type: 'scatter',
+                line: { color: 'rgba(255, 165, 0, 0.3)', width: 1 },
+                hoverinfo: 'none',
+                showlegend: false
+              });
+            }
+          });
+        }
       }
 
       const plotDiv = document.getElementById('plot');
@@ -1014,10 +1133,22 @@
       selectedPaper = item;
       connectedPapers = new Set();
 
+      // References (이 논문이 인용한 것) 와 Cited by (이 논문을 인용한 것) 분리
+      const references = [];  // source = this paper
+      const citedBy = [];     // target = this paper
+
       // citation links에서 연결된 논문 찾기
       citationLinks.forEach(link => {
-        if (link.source === item.id) connectedPapers.add(link.target);
-        if (link.target === item.id) connectedPapers.add(link.source);
+        if (link.source === item.id) {
+          connectedPapers.add(link.target);
+          const refPaper = allPapers.find(p => p.id === link.target);
+          if (refPaper) references.push(refPaper);
+        }
+        if (link.target === item.id) {
+          connectedPapers.add(link.source);
+          const citingPaper = allPapers.find(p => p.id === link.source);
+          if (citingPaper) citedBy.push(citingPaper);
+        }
       });
 
       // 맵 다시 렌더링
@@ -1029,18 +1160,23 @@
       const typeLabel = item.is_paper ? 'Paper' : 'App/Service';
 
       const citationBadge = item.citation_count !== null && item.citation_count !== undefined
-        ? `<span class="badge" style="background: #ffd70033; color: #ffd700;">Cited: ${item.citation_count}</span>`
+        ? `<span class="badge" style="background: #ffd70033; color: #ffd700;">Global: ${item.citation_count}</span>`
         : '';
 
-      const connectedBadge = connectedPapers.size > 0
-        ? `<span class="badge" style="background: #ff6b6b33; color: #ff6b6b;">Connected: ${connectedPapers.size}</span>`
+      const refsBadge = references.length > 0
+        ? `<span class="badge" style="background: #58a6ff33; color: #58a6ff;">Refs: ${references.length}</span>`
+        : '';
+
+      const citedByBadge = citedBy.length > 0
+        ? `<span class="badge" style="background: #f9731633; color: #f97316;">Cited: ${citedBy.length}</span>`
         : '';
 
       document.getElementById('detailMeta').innerHTML = `
         <span class="badge ${typeClass}">${typeLabel}</span>
         <span class="badge cluster">Cluster ${item.cluster}: ${item.cluster_label || ''}</span>
         ${citationBadge}
-        ${connectedBadge}
+        ${refsBadge}
+        ${citedByBadge}
         <br><br>
         <span><strong>Year:</strong> ${item.year || 'N/A'}</span>
         <span><strong>Venue:</strong> ${item.venue || 'N/A'}</span>
@@ -1062,11 +1198,53 @@
       document.getElementById('detailAbstract').textContent =
         item.abstract || 'No abstract available.';
 
-      // 노트 표시
-      const notesHtml = item.notes
-        ? `<div class="notes"><h3>Notes</h3><div class="notes-content">${item.notes.replace(/\n/g, '<br>')}</div></div>`
+      // 노트 표시 (HTML 서식 유지)
+      const notesContent = item.notes_html || item.notes || '';
+      const notesHtml = notesContent
+        ? `<div class="notes"><h3>Notes</h3><div class="notes-content">${notesContent}</div></div>`
         : '';
       document.getElementById('detailNotes').innerHTML = notesHtml;
+
+      // References 섹션 (이 논문이 인용한 것) - 파란색
+      const refsSection = document.getElementById('referencesSection');
+      if (references.length > 0) {
+        let refsHtml = `<h3><span class="dot" style="background: #58a6ff;"></span>References (${references.length})</h3><ul>`;
+        references.forEach(p => {
+          const title = p.title.length > 50 ? p.title.substring(0, 50) + '...' : p.title;
+          refsHtml += `<li data-id="${p.id}">${title} <span class="year">(${p.year || 'N/A'})</span></li>`;
+        });
+        refsHtml += '</ul>';
+        refsSection.innerHTML = refsHtml;
+        refsSection.style.display = 'block';
+      } else {
+        refsSection.innerHTML = `<h3><span class="dot" style="background: #58a6ff;"></span>References</h3><p class="empty">No references in library</p>`;
+        refsSection.style.display = 'block';
+      }
+
+      // Cited by 섹션 (이 논문을 인용한 것) - 주황색
+      const citedBySection = document.getElementById('citedBySection');
+      if (citedBy.length > 0) {
+        let citedHtml = `<h3><span class="dot" style="background: #f97316;"></span>Cited by (${citedBy.length})</h3><ul>`;
+        citedBy.forEach(p => {
+          const title = p.title.length > 50 ? p.title.substring(0, 50) + '...' : p.title;
+          citedHtml += `<li data-id="${p.id}">${title} <span class="year">(${p.year || 'N/A'})</span></li>`;
+        });
+        citedHtml += '</ul>';
+        citedBySection.innerHTML = citedHtml;
+        citedBySection.style.display = 'block';
+      } else {
+        citedBySection.innerHTML = `<h3><span class="dot" style="background: #f97316;"></span>Cited by</h3><p class="empty">No citations in library</p>`;
+        citedBySection.style.display = 'block';
+      }
+
+      // Citation 섹션 클릭 핸들러
+      document.querySelectorAll('#referencesSection li, #citedBySection li').forEach(li => {
+        li.addEventListener('click', () => {
+          const paperId = parseInt(li.dataset.id);
+          const paper = allPapers.find(p => p.id === paperId);
+          if (paper) showDetail(paper);
+        });
+      });
 
       // Find similar papers (closest by x,y coordinates)
       const similar = findSimilarPapers(item, allPapers, 5);
@@ -1325,37 +1503,95 @@
     const missingModal = document.getElementById('missingModal');
     const missingList = document.getElementById('missingList');
 
-    document.getElementById('showMissing').addEventListener('click', () => {
-      // Calculate missing papers
+    // Classics: 내 논문들이 많이 인용하는 것
+    document.getElementById('showClassics').addEventListener('click', () => {
       const myS2Ids = new Set(allPapers.map(p => p.s2_id).filter(Boolean));
-      const refCounts = {};
+      const myDOIs = new Set(allPapers.map(p => (p.doi || '').toLowerCase()).filter(Boolean));
+      const classicCounts = {};
 
       allPapers.forEach(p => {
         (p.references || []).forEach(refId => {
           if (!myS2Ids.has(refId)) {
-            refCounts[refId] = (refCounts[refId] || 0) + 1;
+            classicCounts[`s2:${refId}`] = (classicCounts[`s2:${refId}`] || 0) + 1;
+          }
+        });
+        (p.cr_references || []).forEach(refDoi => {
+          if (refDoi && !myDOIs.has(refDoi.toLowerCase())) {
+            classicCounts[`doi:${refDoi}`] = (classicCounts[`doi:${refDoi}`] || 0) + 1;
           }
         });
       });
 
-      // Sort by count
-      const sorted = Object.entries(refCounts)
+      const sorted = Object.entries(classicCounts)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 20);
 
-      // Render list
-      missingList.innerHTML = sorted.map(([s2Id, count], i) => `
-        <div class="missing-item">
-          <div class="missing-rank">${i + 1}</div>
-          <div class="missing-info">
-            <span class="missing-count">${count}회 인용</span><br>
-            <a class="missing-link" href="https://www.semanticscholar.org/paper/${s2Id}" target="_blank">
-              Semantic Scholar에서 보기 →
-            </a>
-          </div>
-        </div>
-      `).join('');
+      let html = '<h4 style="color: #58a6ff; font-size: 14px; margin-bottom: 12px;">📚 Classics</h4>';
+      html += '<p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">내 논문들이 많이 인용하는 기초 논문</p>';
 
+      if (sorted.length > 0) {
+        html += sorted.map(([key, count], i) => {
+          const type = key.substring(0, key.indexOf(':'));
+          const id = key.substring(key.indexOf(':') + 1);
+          const url = type === 's2'
+            ? `https://www.semanticscholar.org/paper/${id}`
+            : `https://doi.org/${id}`;
+          const label = type === 's2' ? 'Semantic Scholar →' : id.substring(0, 40) + (id.length > 40 ? '...' : '');
+          return `
+            <div class="missing-item">
+              <div class="missing-rank">${i + 1}</div>
+              <div class="missing-info">
+                <span class="missing-count">${count}개 논문이 인용</span><br>
+                <a class="missing-link" href="${url}" target="_blank">${label}</a>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } else {
+        html += '<p style="color: var(--text-muted);">No classics found</p>';
+      }
+
+      missingList.innerHTML = html;
+      missingModal.classList.add('active');
+    });
+
+    // New Work: 내 논문들을 많이 인용하는 것
+    document.getElementById('showNewWork').addEventListener('click', () => {
+      const myS2Ids = new Set(allPapers.map(p => p.s2_id).filter(Boolean));
+      const newWorkCounts = {};
+
+      allPapers.forEach(p => {
+        (p.citations || []).forEach(citeId => {
+          if (!myS2Ids.has(citeId)) {
+            newWorkCounts[citeId] = (newWorkCounts[citeId] || 0) + 1;
+          }
+        });
+      });
+
+      const sorted = Object.entries(newWorkCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 20);
+
+      let html = '<h4 style="color: #f97316; font-size: 14px; margin-bottom: 12px;">🆕 New Work</h4>';
+      html += '<p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">내 논문들을 많이 인용하는 최신 논문</p>';
+
+      if (sorted.length > 0) {
+        html += sorted.map(([s2Id, count], i) => `
+          <div class="missing-item">
+            <div class="missing-rank">${i + 1}</div>
+            <div class="missing-info">
+              <span class="missing-count" style="background: #f9731633; color: #f97316;">${count}개 논문 인용</span><br>
+              <a class="missing-link" href="https://www.semanticscholar.org/paper/${s2Id}" target="_blank">
+                Semantic Scholar →
+              </a>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        html += '<p style="color: var(--text-muted);">No new work found (S2 citations data needed)</p>';
+      }
+
+      missingList.innerHTML = html;
       missingModal.classList.add('active');
     });
 
