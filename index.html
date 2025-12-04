@@ -430,6 +430,8 @@
     let showCitations = true;
     let highlightCluster = null;  // null = 전체, 숫자 = 해당 클러스터 하이라이트
     let filterMode = 'highlight';  // 'filter' = 숨김, 'highlight' = 흐리게
+    let selectedPaper = null;  // 선택된 논문
+    let connectedPapers = new Set();  // 선택된 논문과 연결된 논문들
     const CLUSTER_COLORS = [
       '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7',
       '#dfe6e9', '#a29bfe', '#fd79a8', '#00b894', '#e17055',
@@ -566,6 +568,12 @@
 
       // opacity 계산 함수
       function getOpacity(p, baseOpacity) {
+        // 선택된 논문이 있으면 - 전체 맵 보이게, 살짝만 강조
+        if (selectedPaper !== null) {
+          if (p.id === selectedPaper.id) return 1;
+          if (connectedPapers.has(p.id)) return 0.9;
+          return 0.5;  // 나머지도 반 정도 보이게
+        }
         // 클러스터 하이라이트가 있으면 그것 우선
         if (highlightCluster !== null) {
           return p.cluster === highlightCluster ? 1 : 0.15;
@@ -577,28 +585,66 @@
         return baseOpacity;
       }
 
+      // 마커 크기 - 선택과 무관하게 일정
+      function getSize(p) {
+        const baseSize = 8 + p.venue_quality * 2;
+        const citationBonus = p.citation_count ? Math.log10(p.citation_count + 1) * 3 : 0;
+        return baseSize + citationBonus;
+      }
+
+      // 선택된 논문 테두리
+      function getLineWidth(p) {
+        if (selectedPaper !== null && p.id === selectedPaper.id) return 4;
+        if (selectedPaper !== null && connectedPapers.has(p.id)) return 3;
+        return 1;
+      }
+
+      function getLineColor(p) {
+        if (selectedPaper !== null && p.id === selectedPaper.id) return '#ffd700';
+        if (selectedPaper !== null && connectedPapers.has(p.id)) return '#ff6b6b';
+        return '#0d1117';
+      }
+
+      // 단어 단위 줄바꿈 함수
+      function wrapText(text, maxLen = 25) {
+        const words = text.split(' ');
+        const lines = [];
+        let line = '';
+        for (const word of words) {
+          if ((line + ' ' + word).trim().length <= maxLen) {
+            line = (line + ' ' + word).trim();
+          } else {
+            if (line) lines.push(line);
+            line = word;
+          }
+        }
+        if (line) lines.push(line);
+        return lines.join('<br>');
+      }
+
       // Papers trace (circles)
       const paperTrace = {
         x: paperItems.map(p => p.x),
         y: paperItems.map(p => p.y),
-        text: paperItems.map(p =>
-          `<b>${p.title}</b><br>` +
-          `${p.venue || 'N/A'} (${p.year || 'N/A'})<br>` +
-          `Cluster ${p.cluster}: ${p.cluster_label || ''}`
-        ),
+        text: paperItems.map(p => {
+          const wrappedTitle = wrapText(p.title || '', 28);
+          return `<b>${wrappedTitle}</b><br><br>` +
+            `${p.year || 'N/A'}<br>` +
+            `${(p.venue || '').substring(0, 30)}<br>` +
+            `Cluster ${p.cluster}`;
+        }),
         customdata: paperItems,
         mode: 'markers',
         type: 'scatter',
         name: 'Papers',
         marker: {
-          size: paperItems.map(p => {
-            const baseSize = 8 + p.venue_quality * 2;
-            const citationBonus = p.citation_count ? Math.log10(p.citation_count + 1) * 3 : 0;
-            return baseSize + citationBonus;
-          }),
+          size: paperItems.map(p => getSize(p)),
           color: paperItems.map(p => CLUSTER_COLORS[p.cluster % CLUSTER_COLORS.length]),
           opacity: paperItems.map(p => getOpacity(p, 0.8)),
-          line: { width: 1, color: '#0d1117' }
+          line: {
+            width: paperItems.map(p => getLineWidth(p)),
+            color: paperItems.map(p => getLineColor(p))
+          }
         },
         hovertemplate: '%{text}<extra></extra>'
       };
@@ -607,11 +653,12 @@
       const appTrace = {
         x: appItems.map(p => p.x),
         y: appItems.map(p => p.y),
-        text: appItems.map(p =>
-          `<b>${p.title}</b><br>` +
-          `App/Service<br>` +
-          `Cluster ${p.cluster}: ${p.cluster_label || ''}`
-        ),
+        text: appItems.map(p => {
+          const wrappedTitle = wrapText(p.title || '', 28);
+          return `<b>${wrappedTitle}</b><br><br>` +
+            `App/Service<br>` +
+            `Cluster ${p.cluster}`;
+        }),
         customdata: appItems,
         mode: 'markers',
         type: 'scatter',
@@ -694,19 +741,46 @@
       }
 
       const plotDiv = document.getElementById('plot');
+
       Plotly.newPlot(plotDiv, traces, layout, config).then(function() {
         plotDiv.on('plotly_click', function(data) {
-          if (data.points && data.points[0]) {
+          if (data.points && data.points[0] && data.points[0].customdata) {
             showDetail(data.points[0].customdata);
           }
         });
+
+        // 빈 곳 더블클릭하면 선택 해제
+        plotDiv.on('plotly_doubleclick', function() {
+          clearSelection();
+        });
       });
+    }
+
+    function clearSelection() {
+      selectedPaper = null;
+      connectedPapers = new Set();
+      document.getElementById('detailPanel').classList.remove('active');
+      setTimeout(() => Plotly.Plots.resize('plot'), 10);
+      render(currentFiltered);
     }
 
     function showDetail(item) {
       const panel = document.getElementById('detailPanel');
       panel.classList.add('active');
       setTimeout(() => Plotly.Plots.resize('plot'), 10);
+
+      // 선택된 논문과 연결된 논문들 설정
+      selectedPaper = item;
+      connectedPapers = new Set();
+
+      // citation links에서 연결된 논문 찾기
+      citationLinks.forEach(link => {
+        if (link.source === item.id) connectedPapers.add(link.target);
+        if (link.target === item.id) connectedPapers.add(link.source);
+      });
+
+      // 맵 다시 렌더링
+      render(currentFiltered);
 
       document.getElementById('detailTitle').textContent = item.title || 'Untitled';
 
@@ -717,10 +791,15 @@
         ? `<span class="badge" style="background: #ffd70033; color: #ffd700;">Cited: ${item.citation_count}</span>`
         : '';
 
+      const connectedBadge = connectedPapers.size > 0
+        ? `<span class="badge" style="background: #ff6b6b33; color: #ff6b6b;">Connected: ${connectedPapers.size}</span>`
+        : '';
+
       document.getElementById('detailMeta').innerHTML = `
         <span class="badge ${typeClass}">${typeLabel}</span>
         <span class="badge cluster">Cluster ${item.cluster}: ${item.cluster_label || ''}</span>
         ${citationBadge}
+        ${connectedBadge}
         <br><br>
         <span><strong>Year:</strong> ${item.year || 'N/A'}</span>
         <span><strong>Venue:</strong> ${item.venue || 'N/A'}</span>
@@ -875,6 +954,9 @@
       document.querySelectorAll('.mode-option').forEach(o => o.classList.remove('active'));
       document.querySelector('.mode-option[data-mode="highlight"]').classList.add('active');
       document.querySelectorAll('.cluster-item').forEach(el => el.classList.remove('active'));
+      selectedPaper = null;
+      connectedPapers = new Set();
+      document.getElementById('detailPanel').classList.remove('active');
       currentFiltered = [...allPapers];
       render(currentFiltered);
       updateStats(currentFiltered);
