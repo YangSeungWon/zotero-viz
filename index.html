@@ -673,6 +673,8 @@
     <div class="stats" id="stats">Loading...</div>
     <span class="filter-status" id="filterStatus"></span>
     <button class="missing-btn" id="showGlobalStats" title="전체 통계">📈 Stats</button>
+    <button class="missing-btn" id="copyClusters" title="클러스터별 논문 목록 복사">📋 Clusters</button>
+    <button class="missing-btn" id="copyFiltered" title="필터된 논문 정보+노트 복사">📝 Export</button>
     <button class="missing-btn" id="showClassics" title="많이 인용된 기초 논문" style="color: #58a6ff;">📚 Classics</button>
     <button class="missing-btn" id="showNewWork" title="내 논문을 인용하는 최신작" style="color: #f97316;">🆕 New</button>
     <div class="legend">
@@ -1735,6 +1737,75 @@
     // Missing papers modal
     const missingModal = document.getElementById('missingModal');
     const missingList = document.getElementById('missingList');
+
+    // Copy clusters: 클러스터별 논문 목록 복사
+    document.getElementById('copyClusters').addEventListener('click', async () => {
+      const clusters = [...new Set(allPapers.map(p => p.cluster))].sort((a, b) => a - b);
+
+      let text = `# 논문 라이브러리 클러스터 구조\n`;
+      text += `총 ${allPapers.length}개 논문, ${clusters.length}개 클러스터\n\n`;
+
+      clusters.forEach(c => {
+        const clusterPapers = allPapers.filter(p => p.cluster === c);
+        const label = clusterLabels[c] || `Cluster ${c}`;
+
+        text += `## Cluster ${c}: ${label} (${clusterPapers.length}편)\n`;
+        clusterPapers.forEach(p => {
+          const year = p.year || 'N/A';
+          const venue = p.venue ? ` - ${p.venue.substring(0, 30)}` : '';
+          text += `- ${p.title} (${year})${venue}\n`;
+        });
+        text += '\n';
+      });
+
+      try {
+        await navigator.clipboard.writeText(text);
+        const btn = document.getElementById('copyClusters');
+        const orig = btn.textContent;
+        btn.textContent = '✅ Copied!';
+        setTimeout(() => btn.textContent = orig, 1500);
+      } catch (e) {
+        alert('복사 실패: ' + e.message);
+      }
+    });
+
+    // Copy filtered: 필터된 논문 정보+노트 복사
+    document.getElementById('copyFiltered').addEventListener('click', async () => {
+      const papers = currentFiltered;
+
+      let text = `# 논문 목록 (${papers.length}편)\n\n`;
+
+      papers.forEach((p, i) => {
+        text += `## ${i + 1}. ${p.title}\n`;
+        text += `- **Year**: ${p.year || 'N/A'}\n`;
+        text += `- **Authors**: ${p.authors || 'N/A'}\n`;
+        text += `- **Venue**: ${p.venue || 'N/A'}\n`;
+        text += `- **Cluster**: ${p.cluster} (${clusterLabels[p.cluster] || ''})\n`;
+        if (p.citation_count) text += `- **Citations**: ${p.citation_count}\n`;
+        if (p.doi) text += `- **DOI**: ${p.doi}\n`;
+        if (p.tags && p.tags !== 'nan') text += `- **Tags**: ${p.tags}\n`;
+
+        if (p.abstract) {
+          text += `\n**Abstract**:\n${p.abstract}\n`;
+        }
+
+        if (p.notes) {
+          text += `\n**Notes**:\n${p.notes}\n`;
+        }
+
+        text += '\n---\n\n';
+      });
+
+      try {
+        await navigator.clipboard.writeText(text);
+        const btn = document.getElementById('copyFiltered');
+        const orig = btn.textContent;
+        btn.textContent = '✅ Copied!';
+        setTimeout(() => btn.textContent = orig, 1500);
+      } catch (e) {
+        alert('복사 실패: ' + e.message);
+      }
+    });
 
     // Global stats: 전체 통계
     document.getElementById('showGlobalStats').addEventListener('click', () => {
