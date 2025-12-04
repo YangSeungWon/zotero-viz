@@ -313,6 +313,27 @@ def main():
 
     # 7. JSON 출력
     print(f"\nWriting {args.output}...")
+
+    # 기존 papers.json에서 citation 데이터 로드 (있으면)
+    existing_citation_data = {}
+    existing_citation_links = []
+    try:
+        with open(args.output, "r", encoding="utf-8") as f:
+            existing = json.load(f)
+            existing_papers = existing.get("papers", existing)
+            existing_citation_links = existing.get("citation_links", [])
+            for p in existing_papers:
+                if p.get("doi"):
+                    existing_citation_data[p["doi"]] = {
+                        "citation_count": p.get("citation_count"),
+                        "s2_id": p.get("s2_id", ""),
+                        "references": p.get("references", []),
+                        "citations": p.get("citations", []),
+                    }
+        print(f"  Loaded citation data for {len(existing_citation_data)} papers")
+    except:
+        pass
+
     records = []
     for idx, row in df.iterrows():
         rec = {
@@ -333,15 +354,27 @@ def main():
             "abstract": str(row.get("Abstract Note", "") or "")[:500],  # 길이 제한
             "tags": str(row.get("Manual Tags", "") or ""),
             "has_notes": bool(pd.notna(row.get("Notes")) and len(str(row.get("Notes", ""))) > 50),
+            "notes_html": str(row.get("Notes", ""))[:5000] if pd.notna(row.get("Notes")) else "",  # HTML 보존
             "notes": extract_text_from_html(row.get("Notes", ""))[:2000] if pd.notna(row.get("Notes")) else "",
         }
+
+        # 기존 citation 데이터 복원
+        doi = rec.get("doi", "")
+        if doi and doi in existing_citation_data:
+            cdata = existing_citation_data[doi]
+            rec["citation_count"] = cdata["citation_count"]
+            rec["s2_id"] = cdata["s2_id"]
+            rec["references"] = cdata["references"]
+            rec["citations"] = cdata["citations"]
+
         records.append(rec)
 
     # 출력 데이터에 클러스터 중심점 포함
     output_data = {
         "papers": records,
         "cluster_centroids": cluster_centroids,
-        "cluster_labels": cluster_labels
+        "cluster_labels": cluster_labels,
+        "citation_links": existing_citation_links  # 기존 citation links 보존
     }
 
     with open(args.output, "w", encoding="utf-8") as f:
