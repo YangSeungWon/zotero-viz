@@ -1017,16 +1017,30 @@
         return lines.join('<br>');
       }
 
+      // 노트 첫 문단 추출
+      function getFirstParagraph(notes, maxLen = 100) {
+        if (!notes) return '';
+        // 첫 문단 (빈 줄 전까지)
+        const para = notes.split(/\n\s*\n/)[0].trim();
+        if (para.length > maxLen) {
+          return para.substring(0, maxLen) + '...';
+        }
+        return para;
+      }
+
       // Papers trace (circles)
       const paperTrace = {
         x: paperItems.map(p => p.x),
         y: paperItems.map(p => p.y),
         text: paperItems.map(p => {
           const wrappedTitle = wrapText(p.title || '', 28);
+          const firstNote = getFirstParagraph(p.notes);
+          const notePreview = firstNote ? `<br><i>"${wrapText(firstNote, 40)}"</i>` : '';
           return `<b>${wrappedTitle}</b><br><br>` +
             `${p.year || 'N/A'}<br>` +
             `${(p.venue || '').substring(0, 30)}<br>` +
-            `Cluster ${p.cluster}`;
+            `Cluster ${p.cluster}` +
+            notePreview;
         }),
         customdata: paperItems,
         mode: 'markers',
