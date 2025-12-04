@@ -142,11 +142,28 @@
       overflow-y: auto;
       overflow-x: hidden;
       padding: 0;
+      position: relative;
     }
     .detail-panel.active {
       width: 350px;
-      min-width: 350px;
+      min-width: 250px;
+      max-width: 600px;
       padding: 16px;
+      padding-left: 20px;
+    }
+    .resize-handle {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 6px;
+      cursor: ew-resize;
+      background: transparent;
+      transition: background 0.15s;
+    }
+    .resize-handle:hover,
+    .resize-handle.dragging {
+      background: var(--accent);
     }
     .detail-panel h2 {
       font-size: 15px;
@@ -195,6 +212,27 @@
       margin-right: 12px;
     }
     .detail-panel .links a:hover { text-decoration: underline; }
+    .detail-panel .notes {
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-color);
+    }
+    .detail-panel .notes h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .detail-panel .notes-content {
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--text-secondary);
+      background: var(--bg-tertiary);
+      padding: 10px;
+      border-radius: 6px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
     .detail-panel .similar-papers {
       margin-top: 16px;
       padding-top: 12px;
@@ -258,12 +296,58 @@
       border-right: 1px solid var(--border-color);
       overflow-y: auto;
       padding: 12px;
+      transition: width 0.2s, min-width 0.2s, padding 0.2s;
+    }
+    .cluster-panel.collapsed {
+      width: 48px;
+      min-width: 48px;
+      padding: 8px;
+    }
+    .cluster-panel.collapsed #clusterList .label,
+    .cluster-panel.collapsed #clusterList .count {
+      display: none;
+    }
+    .cluster-panel.collapsed .cluster-item {
+      justify-content: center;
+      padding: 6px;
+    }
+    .cluster-panel.collapsed .cluster-item .dot {
+      width: 16px;
+      height: 16px;
+    }
+    .cluster-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .cluster-panel.collapsed .cluster-header {
+      justify-content: center;
+    }
+    .cluster-panel.collapsed .cluster-header h3 {
+      display: none;
     }
     .cluster-panel h3 {
       font-size: 13px;
       font-weight: 600;
       color: var(--text-primary);
-      margin-bottom: 12px;
+      margin: 0;
+    }
+    .collapse-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      font-size: 10px;
+      border-radius: 4px;
+    }
+    .collapse-btn:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+    }
+    .cluster-panel.collapsed .collapse-btn {
+      transform: rotate(180deg);
     }
     .cluster-item {
       display: flex;
@@ -408,15 +492,20 @@
 
   <div class="main-content">
     <div class="cluster-panel" id="clusterPanel">
-      <h3>Clusters</h3>
+      <div class="cluster-header">
+        <h3>Clusters</h3>
+        <button class="collapse-btn" id="collapseCluster" title="Toggle panel">◀</button>
+      </div>
       <div id="clusterList"></div>
     </div>
     <div id="plot"></div>
     <div class="detail-panel" id="detailPanel">
+      <div class="resize-handle" id="resizeHandle"></div>
       <h2 id="detailTitle">-</h2>
       <div class="meta" id="detailMeta"></div>
       <div class="links" id="detailLinks"></div>
       <div class="abstract" id="detailAbstract"></div>
+      <div id="detailNotes"></div>
       <div class="similar-papers" id="similarPapers"></div>
     </div>
   </div>
@@ -767,6 +856,11 @@
     function showDetail(item) {
       const panel = document.getElementById('detailPanel');
       panel.classList.add('active');
+      // 저장된 너비 적용
+      const savedWidth = localStorage.getItem('detailPanelWidth');
+      if (savedWidth) {
+        panel.style.width = savedWidth;
+      }
       setTimeout(() => Plotly.Plots.resize('plot'), 10);
 
       // 선택된 논문과 연결된 논문들 설정
@@ -820,6 +914,12 @@
 
       document.getElementById('detailAbstract').textContent =
         item.abstract || 'No abstract available.';
+
+      // 노트 표시
+      const notesHtml = item.notes
+        ? `<div class="notes"><h3>Notes</h3><div class="notes-content">${item.notes.replace(/\n/g, '<br>')}</div></div>`
+        : '';
+      document.getElementById('detailNotes').innerHTML = notesHtml;
 
       // Find similar papers (closest by x,y coordinates)
       const similar = findSimilarPapers(item, allPapers, 5);
@@ -1025,6 +1125,51 @@
       document.documentElement.dataset.theme = 'light';
       document.getElementById('themeToggle').textContent = '☀️';
     }
+
+    // 클러스터 패널 접기/펼치기
+    const clusterPanel = document.getElementById('clusterPanel');
+    if (localStorage.getItem('clusterCollapsed') === 'true') {
+      clusterPanel.classList.add('collapsed');
+    }
+
+    document.getElementById('collapseCluster').addEventListener('click', () => {
+      clusterPanel.classList.toggle('collapsed');
+      localStorage.setItem('clusterCollapsed', clusterPanel.classList.contains('collapsed'));
+      setTimeout(() => Plotly.Plots.resize('plot'), 250);
+    });
+
+    // 사이드패널 리사이즈
+    const resizeHandle = document.getElementById('resizeHandle');
+    const detailPanel = document.getElementById('detailPanel');
+    let isResizing = false;
+
+    resizeHandle.addEventListener('mousedown', (e) => {
+      isResizing = true;
+      resizeHandle.classList.add('dragging');
+      document.body.style.cursor = 'ew-resize';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isResizing) return;
+      const newWidth = window.innerWidth - e.clientX;
+      if (newWidth >= 250 && newWidth <= 600) {
+        detailPanel.style.width = newWidth + 'px';
+        Plotly.Plots.resize('plot');
+      }
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (isResizing) {
+        isResizing = false;
+        resizeHandle.classList.remove('dragging');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        // 너비 저장
+        localStorage.setItem('detailPanelWidth', detailPanel.style.width);
+      }
+    });
 
     // Load data
     loadData();
