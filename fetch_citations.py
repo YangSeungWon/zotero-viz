@@ -12,26 +12,37 @@ from pathlib import Path
 BASE_URL = "https://api.semanticscholar.org/graph/v1"
 FIELDS = "citationCount,citations.paperId,citations.title,references.paperId,references.title"
 
-def get_paper_by_doi(doi: str) -> dict:
+def get_paper_by_doi(doi: str, retry=3) -> dict:
     """DOI로 논문 정보 가져오기"""
     url = f"{BASE_URL}/paper/DOI:{doi}"
     params = {"fields": FIELDS}
 
-    try:
-        resp = requests.get(url, params=params, timeout=10)
-        if resp.status_code == 200:
-            return resp.json()
-        elif resp.status_code == 404:
-            return None
-        else:
-            print(f"  Error {resp.status_code} for DOI {doi}")
-            return None
-    except Exception as e:
-        print(f"  Exception for DOI {doi}: {e}")
-        return None
+    for attempt in range(retry):
+        try:
+            resp = requests.get(url, params=params, timeout=15)
+            if resp.status_code == 200:
+                return resp.json()
+            elif resp.status_code == 404:
+                return None
+            elif resp.status_code == 429:
+                wait = 10 * (attempt + 1)
+                print(f"  Rate limited, waiting {wait}s...")
+                time.sleep(wait)
+                continue
+            else:
+                print(f"  Error {resp.status_code} for DOI {doi}")
+                return None
+        except Exception as e:
+            if attempt < retry - 1:
+                print(f"  Retry {attempt+1}/{retry} for DOI {doi}")
+                time.sleep(5)
+            else:
+                print(f"  Exception for DOI {doi}: {e}")
+                return None
+    return None
 
 
-def get_paper_by_title(title: str) -> dict:
+def get_paper_by_title(title: str, retry=3) -> dict:
     """제목으로 논문 검색"""
     url = f"{BASE_URL}/paper/search"
     params = {
@@ -40,16 +51,27 @@ def get_paper_by_title(title: str) -> dict:
         "limit": 1
     }
 
-    try:
-        resp = requests.get(url, params=params, timeout=10)
-        if resp.status_code == 200:
-            data = resp.json()
-            if data.get("data") and len(data["data"]) > 0:
-                return data["data"][0]
-        return None
-    except Exception as e:
-        print(f"  Exception for title search: {e}")
-        return None
+    for attempt in range(retry):
+        try:
+            resp = requests.get(url, params=params, timeout=15)
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("data") and len(data["data"]) > 0:
+                    return data["data"][0]
+                return None
+            elif resp.status_code == 429:
+                wait = 10 * (attempt + 1)
+                print(f"  Rate limited, waiting {wait}s...")
+                time.sleep(wait)
+                continue
+        except Exception as e:
+            if attempt < retry - 1:
+                print(f"  Retry {attempt+1}/{retry} for title search")
+                time.sleep(5)
+            else:
+                print(f"  Exception for title search: {e}")
+                return None
+    return None
 
 
 def main():
@@ -76,11 +98,18 @@ def main():
 
     # 각 논문에 대해 인용 정보 가져오기
     found = 0
+    skipped = 0
     for i, paper in enumerate(papers):
         doi = paper.get("doi", "").strip()
         title = paper.get("title", "")
 
         if not doi and not title:
+            continue
+
+        # 이미 S2 ID가 있으면 스킵
+        if paper.get("s2_id"):
+            skipped += 1
+            found += 1
             continue
 
         print(f"[{i+1}/{len(papers)}] {title[:50]}...")
@@ -118,10 +147,10 @@ def main():
             paper["citations"] = []
             print(f"  -> Not found")
 
-        # Rate limiting (100 requests per 5 minutes = 1 per 3 seconds)
-        time.sleep(3.5)
+        # Rate limiting - 5초 대기
+        time.sleep(5)
 
-    print(f"\nFound {found}/{len(papers)} papers in Semantic Scholar")
+    print(f"\nFound {found}/{len(papers)} papers in Semantic Scholar (skipped {skipped} already cached)")
 
     # 내 라이브러리 내 인용 관계 계산
     print("\nCalculating internal citation links...")
