@@ -403,19 +403,7 @@ function render(filteredPapers) {
     const initialXRange = plotDiv.layout.xaxis.range || [Math.min(...papers.map(p => p.x)), Math.max(...papers.map(p => p.x))];
     const initialRange = initialXRange[1] - initialXRange[0];
 
-    plotDiv.on('plotly_relayout', function(eventData) {
-      if (eventData['xaxis.autorange'] || eventData['yaxis.autorange']) {
-        // 더블클릭으로 리셋 시 원래 크기로
-        zoomScale = 1;
-      } else if (eventData['xaxis.range[0]'] !== undefined) {
-        const newRange = eventData['xaxis.range[1]'] - eventData['xaxis.range[0]'];
-        const zoomFactor = Math.sqrt(initialRange / newRange);
-        zoomScale = Math.max(0.5, Math.min(5, zoomFactor)); // 0.5x ~ 5x 제한
-      } else {
-        return; // 다른 relayout 이벤트는 무시
-      }
-
-      // 이름으로 trace 인덱스 찾기
+    function updateMarkerSizes() {
       const paperIdx = plotDiv.data.findIndex(t => t.name === 'Papers');
       const appIdx = plotDiv.data.findIndex(t => t.name === 'Apps/Services');
       const glowIdx = plotDiv.data.findIndex(t => t.marker?.color === 'rgba(0, 255, 255, 0.3)');
@@ -432,6 +420,25 @@ function render(filteredPapers) {
         const newGlowSizes = glowItems.map(p => (getSize(p) + 12) * zoomScale);
         Plotly.restyle(plotDiv, { 'marker.size': [newGlowSizes] }, [glowIdx]);
       }
+    }
+
+    plotDiv.on('plotly_relayout', function(eventData) {
+      if (eventData['xaxis.autorange'] || eventData['yaxis.autorange']) {
+        zoomScale = 1;
+      } else if (eventData['xaxis.range[0]'] !== undefined) {
+        const newRange = eventData['xaxis.range[1]'] - eventData['xaxis.range[0]'];
+        const zoomFactor = Math.sqrt(initialRange / newRange);
+        zoomScale = Math.max(0.5, Math.min(5, zoomFactor));
+      } else {
+        return;
+      }
+      updateMarkerSizes();
+    });
+
+    // 더블클릭 리셋 보완
+    plotDiv.on('plotly_doubleclick', function() {
+      zoomScale = 1;
+      updateMarkerSizes();
     });
   });
 }
