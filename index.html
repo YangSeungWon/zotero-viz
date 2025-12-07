@@ -664,11 +664,347 @@
     .missing-link:hover {
       text-decoration: underline;
     }
+
+    /* ===========================================
+       MOBILE UI COMPONENTS
+       =========================================== */
+
+    /* Hamburger Button */
+    .hamburger-btn {
+      display: none;
+      width: 44px;
+      height: 44px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      cursor: pointer;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 10px;
+      z-index: 1001;
+    }
+    .hamburger-btn span {
+      display: block;
+      width: 20px;
+      height: 2px;
+      background: var(--text-secondary);
+      border-radius: 1px;
+      transition: transform 0.3s, opacity 0.3s;
+    }
+    .hamburger-btn.active span:nth-child(1) {
+      transform: rotate(45deg) translate(4px, 4px);
+    }
+    .hamburger-btn.active span:nth-child(2) {
+      opacity: 0;
+    }
+    .hamburger-btn.active span:nth-child(3) {
+      transform: rotate(-45deg) translate(4px, -4px);
+    }
+
+    /* Mobile Menu Overlay */
+    .mobile-menu-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .mobile-menu-overlay.active {
+      opacity: 1;
+    }
+
+    /* Mobile Menu Panel */
+    .mobile-menu {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 85%;
+      max-width: 320px;
+      height: 100%;
+      background: var(--bg-secondary);
+      z-index: 1000;
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+      overflow-y: auto;
+      padding: 20px;
+      padding-top: calc(20px + env(safe-area-inset-top, 0px));
+    }
+    .mobile-menu.active {
+      transform: translateX(0);
+    }
+    .mobile-menu-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .mobile-menu-header h2 {
+      font-size: 16px;
+      color: var(--text-primary);
+      margin: 0;
+    }
+    .mobile-menu-section {
+      margin-bottom: 20px;
+    }
+    .mobile-menu-section h3 {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      letter-spacing: 0.5px;
+    }
+    .mobile-menu-section .control-group {
+      margin-bottom: 10px;
+    }
+    .mobile-menu-section input[type="number"],
+    .mobile-menu-section input[type="text"],
+    .mobile-menu-section select {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 16px;
+    }
+
+    /* Cluster Chips */
+    .cluster-chips {
+      display: none;
+      flex-wrap: nowrap;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .cluster-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .cluster-chip:active {
+      transform: scale(0.95);
+    }
+    .cluster-chip.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+    .cluster-chip .chip-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    /* Bottom Sheet */
+    .bottom-sheet {
+      display: none;
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--bg-secondary);
+      border-top-left-radius: 16px;
+      border-top-right-radius: 16px;
+      z-index: 1000;
+      transform: translateY(100%);
+      transition: transform 0.3s ease;
+      max-height: 80vh;
+      overflow: hidden;
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+    }
+    .bottom-sheet.active {
+      transform: translateY(0);
+    }
+    .bottom-sheet-handle {
+      width: 100%;
+      padding: 12px;
+      display: flex;
+      justify-content: center;
+      cursor: grab;
+    }
+    .bottom-sheet-handle::before {
+      content: '';
+      width: 40px;
+      height: 4px;
+      background: var(--border-color);
+      border-radius: 2px;
+    }
+    .bottom-sheet-content {
+      padding: 0 16px 16px;
+      padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+      overflow-y: auto;
+      max-height: calc(80vh - 40px);
+      -webkit-overflow-scrolling: touch;
+    }
+    .bottom-sheet-content h2 {
+      font-size: 15px;
+      margin-bottom: 10px;
+      padding-right: 40px;
+    }
+    .bottom-sheet-close {
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      width: 32px;
+      height: 32px;
+      background: var(--bg-tertiary);
+      border: none;
+      border-radius: 50%;
+      color: var(--text-muted);
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Mobile Legend */
+    .mobile-legend {
+      display: none;
+      position: fixed;
+      bottom: 12px;
+      right: 12px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 10px;
+      z-index: 100;
+      opacity: 0.9;
+    }
+    .mobile-legend .legend-item {
+      margin-bottom: 4px;
+    }
+    .mobile-legend .legend-item:last-child {
+      margin-bottom: 0;
+    }
+
+    /* ===========================================
+       MOBILE BREAKPOINT
+       =========================================== */
+    @media (max-width: 768px) {
+      body {
+        overflow: hidden;
+      }
+      header {
+        padding: 8px 12px;
+        padding-top: calc(8px + env(safe-area-inset-top, 0px));
+        gap: 10px;
+      }
+      header h1 {
+        font-size: 15px;
+      }
+      .hamburger-btn {
+        display: flex;
+      }
+      .mobile-menu,
+      .mobile-menu-overlay {
+        display: block;
+      }
+      .controls,
+      .legend,
+      .filter-status,
+      #showGlobalStats,
+      #copyClusters,
+      #copyFiltered,
+      #showClassics,
+      #showNewWork {
+        display: none !important;
+      }
+      .mobile-legend {
+        display: block;
+      }
+      .stats {
+        font-size: 11px;
+        flex: 1;
+        text-align: right;
+      }
+      .theme-toggle {
+        padding: 6px 8px;
+        font-size: 12px;
+      }
+      .main-content {
+        flex-direction: column;
+        height: calc(100vh - 56px - env(safe-area-inset-top, 0px));
+      }
+      .cluster-panel {
+        display: none;
+      }
+      .cluster-chips {
+        display: flex;
+      }
+      #plot {
+        flex: 1;
+        width: 100%;
+        min-height: 0;
+      }
+      .detail-panel {
+        display: none !important;
+      }
+      .bottom-sheet {
+        display: block;
+      }
+      .modal {
+        width: 95vw;
+        max-height: 85vh;
+      }
+    }
+
+    /* Landscape on mobile */
+    @media (max-width: 768px) and (orientation: landscape) {
+      header {
+        padding: 4px 12px;
+      }
+      header h1 {
+        font-size: 13px;
+      }
+      .cluster-chips {
+        padding: 4px 8px;
+      }
+      .bottom-sheet {
+        max-height: 70vh;
+      }
+      .bottom-sheet-content {
+        max-height: calc(70vh - 40px);
+      }
+    }
+
+    /* Touch feedback */
+    @media (hover: none) and (pointer: coarse) {
+      .cluster-chip:active,
+      .hamburger-btn:active,
+      .bottom-sheet-close:active {
+        opacity: 0.7;
+      }
+    }
   </style>
 </head>
 <body>
   <header>
     <h1>Paper Map</h1>
+    <button class="hamburger-btn" id="hamburgerBtn" aria-label="Menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
     <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
     <div class="stats" id="stats">Loading...</div>
     <span class="filter-status" id="filterStatus"></span>
@@ -746,6 +1082,67 @@
     </div>
   </header>
 
+  <!-- Mobile Menu Overlay -->
+  <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
+
+  <!-- Mobile Menu -->
+  <nav class="mobile-menu" id="mobileMenu">
+    <div class="mobile-menu-header">
+      <h2>Filters</h2>
+      <button class="theme-toggle" id="mobileThemeToggle" title="Toggle theme">🌙</button>
+    </div>
+
+    <div class="mobile-menu-section">
+      <h3>Filters</h3>
+      <div class="control-group">
+        <label>Min Year</label>
+        <input type="number" id="mobileMinYear" value="1990" min="1990" max="2025">
+      </div>
+      <div class="control-group">
+        <label>Min Venue Quality</label>
+        <select id="mobileMinVenue">
+          <option value="0">All</option>
+          <option value="3">3+</option>
+          <option value="4">4+</option>
+          <option value="5">5 only</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>Tag</label>
+        <select id="mobileTagFilter">
+          <option value="">All tags</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label><input type="checkbox" id="mobilePapersOnly"> Papers only</label>
+      </div>
+    </div>
+
+    <div class="mobile-menu-section">
+      <h3>Search</h3>
+      <div class="control-group">
+        <input type="text" id="mobileSearchFilter" placeholder="Title, author, abstract...">
+      </div>
+    </div>
+
+    <div class="mobile-menu-section">
+      <h3>Display</h3>
+      <div class="control-group">
+        <label><input type="checkbox" id="mobileShowCitations" checked> Show citation links</label>
+      </div>
+    </div>
+
+    <div class="mobile-menu-section">
+      <h3>Actions</h3>
+      <button id="mobileResetFilter" style="width: 100%; background: var(--bg-tertiary); margin-bottom: 8px;">Reset Filters</button>
+      <button id="mobileShowStats" style="width: 100%; background: var(--bg-tertiary); margin-bottom: 8px;">📈 Statistics</button>
+      <button id="mobileCopyExport" style="width: 100%; background: var(--bg-tertiary);">📝 Export</button>
+    </div>
+  </nav>
+
+  <!-- Mobile Cluster Chips -->
+  <div class="cluster-chips" id="mobileClusterChips"></div>
+
   <div class="main-content">
     <div class="cluster-panel" id="clusterPanel">
       <div class="cluster-header">
@@ -778,6 +1175,34 @@
       </div>
       <p class="modal-desc">내 라이브러리에서 자주 인용하지만 아직 없는 논문들</p>
       <div class="modal-content" id="missingList"></div>
+    </div>
+  </div>
+
+  <!-- Mobile Bottom Sheet -->
+  <div class="bottom-sheet" id="bottomSheet">
+    <div class="bottom-sheet-handle" id="bottomSheetHandle"></div>
+    <button class="bottom-sheet-close" id="bottomSheetClose">✕</button>
+    <div class="bottom-sheet-content" id="bottomSheetContent">
+      <h2 id="mobileDetailTitle">-</h2>
+      <div class="meta" id="mobileDetailMeta"></div>
+      <div class="links" id="mobileDetailLinks"></div>
+      <div class="abstract" id="mobileDetailAbstract"></div>
+      <div id="mobileDetailNotes"></div>
+      <div class="citation-section" id="mobileReferencesSection"></div>
+      <div class="citation-section" id="mobileCitedBySection"></div>
+      <div class="similar-papers" id="mobileSimilarPapers"></div>
+    </div>
+  </div>
+
+  <!-- Mobile Legend -->
+  <div class="mobile-legend" id="mobileLegend">
+    <div class="legend-item">
+      <div class="legend-dot" style="background: #58a6ff; width: 8px; height: 8px; display: inline-block;"></div>
+      Papers
+    </div>
+    <div class="legend-item">
+      <div style="width: 8px; height: 8px; background: #bc8cff; transform: rotate(45deg); display: inline-block;"></div>
+      Apps
     </div>
   </div>
 
@@ -916,6 +1341,18 @@
         currentFiltered = [...allPapers];
         render(currentFiltered);
         updateStats(currentFiltered);
+
+        // Initialize mobile components
+        const mobileTagFilter = document.getElementById('mobileTagFilter');
+        if (mobileTagFilter) {
+          [...allTags].sort().forEach(tag => {
+            const opt = document.createElement('option');
+            opt.value = tag;
+            opt.textContent = tag;
+            mobileTagFilter.appendChild(opt);
+          });
+        }
+        populateMobileClusterChips();
       } catch (e) {
         document.getElementById('stats').textContent = 'Error loading papers.json';
         console.error(e);
@@ -1282,6 +1719,12 @@
     }
 
     function showDetail(item) {
+      // Mobile: use bottom sheet
+      if (window.innerWidth <= 768) {
+        showMobileDetail(item);
+        return;
+      }
+
       const panel = document.getElementById('detailPanel');
       panel.classList.add('active');
       // 저장된 너비 적용
@@ -2167,6 +2610,337 @@ C     Citation 선 토글
 
     // Load data
     loadData();
+
+    // =========================================
+    // MOBILE UI FUNCTIONALITY
+    // =========================================
+
+    const isMobile = () => window.innerWidth <= 768;
+
+    // Hamburger Menu
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    const mobileMenu = document.getElementById('mobileMenu');
+    const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
+
+    function openMobileMenu() {
+      mobileMenu.classList.add('active');
+      mobileMenuOverlay.classList.add('active');
+      hamburgerBtn.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeMobileMenu() {
+      mobileMenu.classList.remove('active');
+      mobileMenuOverlay.classList.remove('active');
+      hamburgerBtn.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    hamburgerBtn.addEventListener('click', () => {
+      if (mobileMenu.classList.contains('active')) {
+        closeMobileMenu();
+      } else {
+        openMobileMenu();
+      }
+    });
+
+    mobileMenuOverlay.addEventListener('click', closeMobileMenu);
+
+    // Swipe to close menu
+    let menuTouchStartX = 0;
+    mobileMenu.addEventListener('touchstart', (e) => {
+      menuTouchStartX = e.touches[0].clientX;
+    }, { passive: true });
+
+    mobileMenu.addEventListener('touchmove', (e) => {
+      const deltaX = e.touches[0].clientX - menuTouchStartX;
+      if (deltaX < -50) {
+        closeMobileMenu();
+      }
+    }, { passive: true });
+
+    // Bottom Sheet
+    const bottomSheet = document.getElementById('bottomSheet');
+    const bottomSheetHandle = document.getElementById('bottomSheetHandle');
+    const bottomSheetClose = document.getElementById('bottomSheetClose');
+
+    let sheetTouchStartY = 0;
+    let sheetTouchCurrentY = 0;
+    let isDraggingSheet = false;
+
+    function openBottomSheet() {
+      bottomSheet.classList.add('active');
+    }
+
+    function closeBottomSheet() {
+      bottomSheet.classList.remove('active');
+      if (isMobile()) {
+        selectedPaper = null;
+        connectedPapers = new Set();
+        render(currentFiltered);
+      }
+    }
+
+    bottomSheetClose.addEventListener('click', closeBottomSheet);
+
+    // Bottom sheet touch handling
+    bottomSheetHandle.addEventListener('touchstart', (e) => {
+      isDraggingSheet = true;
+      sheetTouchStartY = e.touches[0].clientY;
+      bottomSheet.style.transition = 'none';
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+      if (!isDraggingSheet) return;
+      sheetTouchCurrentY = e.touches[0].clientY;
+      const deltaY = sheetTouchCurrentY - sheetTouchStartY;
+      if (deltaY > 0) {
+        bottomSheet.style.transform = `translateY(${deltaY}px)`;
+      }
+    }, { passive: true });
+
+    document.addEventListener('touchend', () => {
+      if (!isDraggingSheet) return;
+      isDraggingSheet = false;
+      const deltaY = sheetTouchCurrentY - sheetTouchStartY;
+      bottomSheet.style.transition = 'transform 0.3s ease';
+      bottomSheet.style.transform = '';
+      if (deltaY > 100) {
+        closeBottomSheet();
+      } else {
+        openBottomSheet();
+      }
+    });
+
+    // Mobile Cluster Chips
+    function populateMobileClusterChips() {
+      const container = document.getElementById('mobileClusterChips');
+      if (!container) return;
+
+      container.innerHTML = '';
+
+      // All chip
+      const allChip = document.createElement('div');
+      allChip.className = 'cluster-chip' + (highlightCluster === null ? ' active' : '');
+      allChip.textContent = 'All';
+      allChip.addEventListener('click', () => {
+        highlightCluster = null;
+        updateMobileClusterChips();
+        render(currentFiltered);
+      });
+      container.appendChild(allChip);
+
+      // Cluster chips
+      const clusters = [...new Set(allPapers.map(p => p.cluster))].sort((a, b) => a - b);
+      clusters.forEach(c => {
+        const label = clusterLabels[c] || `C${c}`;
+        const chip = document.createElement('div');
+        chip.className = 'cluster-chip' + (highlightCluster === c ? ' active' : '');
+        chip.dataset.cluster = c;
+        const shortLabel = label.length > 12 ? label.substring(0, 12) + '..' : label;
+        chip.innerHTML = `<span class="chip-dot" style="background: ${CLUSTER_COLORS[c % CLUSTER_COLORS.length]}"></span>${shortLabel}`;
+        chip.addEventListener('click', () => {
+          if (highlightCluster === c) {
+            highlightCluster = null;
+          } else {
+            highlightCluster = c;
+          }
+          updateMobileClusterChips();
+          render(currentFiltered);
+        });
+        container.appendChild(chip);
+      });
+    }
+
+    function updateMobileClusterChips() {
+      const chips = document.querySelectorAll('.cluster-chip');
+      chips.forEach(chip => {
+        if (chip.dataset.cluster) {
+          chip.classList.toggle('active', highlightCluster === parseInt(chip.dataset.cluster));
+        } else {
+          chip.classList.toggle('active', highlightCluster === null);
+        }
+      });
+    }
+
+    // Mobile Detail View (Bottom Sheet)
+    function showMobileDetail(item) {
+      selectedPaper = item;
+      connectedPapers = new Set();
+
+      const references = [];
+      const citedBy = [];
+
+      citationLinks.forEach(link => {
+        if (link.source === item.id) {
+          connectedPapers.add(link.target);
+          const refPaper = allPapers.find(p => p.id === link.target);
+          if (refPaper) references.push(refPaper);
+        }
+        if (link.target === item.id) {
+          connectedPapers.add(link.source);
+          const citingPaper = allPapers.find(p => p.id === link.source);
+          if (citingPaper) citedBy.push(citingPaper);
+        }
+      });
+
+      render(currentFiltered);
+
+      document.getElementById('mobileDetailTitle').textContent = item.title || 'Untitled';
+
+      const typeClass = item.is_paper ? 'paper' : 'app';
+      const typeLabel = item.is_paper ? 'Paper' : 'App';
+
+      document.getElementById('mobileDetailMeta').innerHTML = `
+        <span class="badge ${typeClass}">${typeLabel}</span>
+        <span class="badge cluster">C${item.cluster}</span>
+        ${item.citation_count ? `<span class="badge" style="background: #ffd70033; color: #ffd700;">${item.citation_count} cited</span>` : ''}
+        <br><br>
+        <span><strong>Year:</strong> ${item.year || 'N/A'}</span>
+        <span><strong>Venue:</strong> ${item.venue || 'N/A'}</span>
+        ${item.authors ? `<br><span style="font-size: 11px;"><strong>Authors:</strong> ${item.authors.substring(0, 60)}${item.authors.length > 60 ? '...' : ''}</span>` : ''}
+      `;
+
+      let linksHtml = '';
+      if (item.url) linksHtml += `<a href="${item.url}" target="_blank">Open</a>`;
+      if (item.doi) linksHtml += `<a href="https://doi.org/${item.doi}" target="_blank">DOI</a>`;
+      document.getElementById('mobileDetailLinks').innerHTML = linksHtml;
+
+      document.getElementById('mobileDetailAbstract').textContent =
+        item.abstract || 'No abstract available.';
+
+      const notesContent = item.notes_html || item.notes || '';
+      document.getElementById('mobileDetailNotes').innerHTML = notesContent
+        ? `<div class="notes"><h3>Notes</h3><div class="notes-content">${notesContent}</div></div>`
+        : '';
+
+      // References
+      const refsSection = document.getElementById('mobileReferencesSection');
+      if (references.length > 0) {
+        let html = `<h3><span class="dot" style="background: #58a6ff;"></span>References (${references.length})</h3><ul>`;
+        references.slice(0, 5).forEach(p => {
+          const title = p.title.length > 35 ? p.title.substring(0, 35) + '...' : p.title;
+          html += `<li data-id="${p.id}">${title} <span class="year">(${p.year || 'N/A'})</span></li>`;
+        });
+        if (references.length > 5) html += `<li style="color: var(--text-muted);">+${references.length - 5} more</li>`;
+        html += '</ul>';
+        refsSection.innerHTML = html;
+        refsSection.style.display = 'block';
+      } else {
+        refsSection.style.display = 'none';
+      }
+
+      // Cited by
+      const citedBySection = document.getElementById('mobileCitedBySection');
+      if (citedBy.length > 0) {
+        let html = `<h3><span class="dot" style="background: #f97316;"></span>Cited by (${citedBy.length})</h3><ul>`;
+        citedBy.slice(0, 5).forEach(p => {
+          const title = p.title.length > 35 ? p.title.substring(0, 35) + '...' : p.title;
+          html += `<li data-id="${p.id}">${title} <span class="year">(${p.year || 'N/A'})</span></li>`;
+        });
+        if (citedBy.length > 5) html += `<li style="color: var(--text-muted);">+${citedBy.length - 5} more</li>`;
+        html += '</ul>';
+        citedBySection.innerHTML = html;
+        citedBySection.style.display = 'block';
+      } else {
+        citedBySection.style.display = 'none';
+      }
+
+      // Similar
+      const similar = findSimilarPapers(item, allPapers, 3);
+      let similarHtml = '<h3>Similar</h3><ul>';
+      similar.forEach(p => {
+        const title = p.title.length > 35 ? p.title.substring(0, 35) + '...' : p.title;
+        similarHtml += `<li data-id="${p.id}">${title} <span class="year">(${p.year || 'N/A'})</span></li>`;
+      });
+      similarHtml += '</ul>';
+      document.getElementById('mobileSimilarPapers').innerHTML = similarHtml;
+
+      // Click handlers
+      document.querySelectorAll('#bottomSheetContent li[data-id]').forEach(li => {
+        li.addEventListener('click', () => {
+          const paperId = parseInt(li.dataset.id);
+          const paper = allPapers.find(p => p.id === paperId);
+          if (paper) showMobileDetail(paper);
+        });
+      });
+
+      openBottomSheet();
+    }
+
+    // Sync mobile controls
+    function syncMobileControls() {
+      document.getElementById('mobileMinYear').value = document.getElementById('minYear').value;
+      document.getElementById('mobileMinVenue').value = document.getElementById('minVenue').value;
+      document.getElementById('mobilePapersOnly').checked = document.getElementById('papersOnly').checked;
+      document.getElementById('mobileTagFilter').value = document.getElementById('tagFilter').value;
+      document.getElementById('mobileSearchFilter').value = document.getElementById('searchFilter').value;
+      document.getElementById('mobileShowCitations').checked = document.getElementById('showCitations').checked;
+    }
+
+    function syncDesktopControls() {
+      document.getElementById('minYear').value = document.getElementById('mobileMinYear').value;
+      document.getElementById('minVenue').value = document.getElementById('mobileMinVenue').value;
+      document.getElementById('papersOnly').checked = document.getElementById('mobilePapersOnly').checked;
+      document.getElementById('tagFilter').value = document.getElementById('mobileTagFilter').value;
+      document.getElementById('searchFilter').value = document.getElementById('mobileSearchFilter').value;
+      document.getElementById('showCitations').checked = document.getElementById('mobileShowCitations').checked;
+      showCitations = document.getElementById('mobileShowCitations').checked;
+    }
+
+    // Mobile control handlers
+    document.getElementById('mobileMinYear').addEventListener('change', () => {
+      syncDesktopControls();
+      applyFilters();
+    });
+    document.getElementById('mobileMinVenue').addEventListener('change', () => {
+      syncDesktopControls();
+      applyFilters();
+    });
+    document.getElementById('mobilePapersOnly').addEventListener('change', () => {
+      syncDesktopControls();
+      applyFilters();
+    });
+    document.getElementById('mobileTagFilter').addEventListener('change', () => {
+      syncDesktopControls();
+      applyFilters();
+    });
+    document.getElementById('mobileSearchFilter').addEventListener('input', debounce(() => {
+      syncDesktopControls();
+      applyFilters();
+    }, 200));
+    document.getElementById('mobileShowCitations').addEventListener('change', () => {
+      syncDesktopControls();
+      render(currentFiltered);
+    });
+    document.getElementById('mobileResetFilter').addEventListener('click', () => {
+      document.getElementById('resetFilter').click();
+      syncMobileControls();
+      closeMobileMenu();
+    });
+    document.getElementById('mobileShowStats').addEventListener('click', () => {
+      document.getElementById('showGlobalStats').click();
+      closeMobileMenu();
+    });
+    document.getElementById('mobileCopyExport').addEventListener('click', () => {
+      document.getElementById('copyFiltered').click();
+      closeMobileMenu();
+    });
+    document.getElementById('mobileThemeToggle').addEventListener('click', () => {
+      document.getElementById('themeToggle').click();
+      document.getElementById('mobileThemeToggle').textContent =
+        document.getElementById('themeToggle').textContent;
+    });
+
+    // Window resize handler
+    window.addEventListener('resize', debounce(() => {
+      if (!isMobile()) {
+        closeMobileMenu();
+        closeBottomSheet();
+      }
+      Plotly.Plots.resize('plot');
+    }, 250));
+
   </script>
 </body>
 </html>
