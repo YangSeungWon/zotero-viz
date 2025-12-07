@@ -54,11 +54,20 @@ function render(filteredPapers) {
     return baseWidth;
   }
 
-  function getLineColor(p) {
+  function getLineColor(p, isolated = false) {
     if (selectedPaper !== null && p.id === selectedPaper.id) return '#ffd700';
     if (selectedPaper !== null && connectedPapers.has(p.id)) return '#ff6b6b';
+    if (isolated) return '#4a5568'; // 회색 테두리 (isolated)
     return '#0d1117';
   }
+
+  // isolated 논문 식별 (내부 인용 관계 없음)
+  const connectedIds = new Set();
+  citationLinks.forEach(link => {
+    connectedIds.add(link.source);
+    connectedIds.add(link.target);
+  });
+  const isIsolated = (p) => !connectedIds.has(p.id);
 
   // 검색 결과 glow 효과용
   const isSearchActive = filterMode === 'highlight' && filteredIds.size < allPapers.length;
@@ -115,7 +124,7 @@ function render(filteredPapers) {
       opacity: paperItems.map(p => getOpacity(p, 0.8)),
       line: {
         width: paperItems.map(p => getLineWidth(p)),
-        color: paperItems.map(p => getLineColor(p))
+        color: paperItems.map(p => getLineColor(p, isIsolated(p)))
       }
     },
     hovertemplate: '%{text}<extra></extra>'
@@ -194,6 +203,14 @@ function render(filteredPapers) {
     displayModeBar: true,
     modeBarButtonsToRemove: ['lasso2d', 'select2d']
   };
+
+  // 현재 줌 상태 저장 (리렌더링 시 보존)
+  const plotDiv = document.getElementById('plot');
+  let savedXRange = null, savedYRange = null;
+  if (plotDiv && plotDiv.layout) {
+    savedXRange = plotDiv.layout.xaxis?.range;
+    savedYRange = plotDiv.layout.yaxis?.range;
+  }
 
   // 인용 관계 선
   const traces = [];
@@ -283,11 +300,39 @@ function render(filteredPapers) {
   if (glowItems.length > 0) traces.push(glowTrace);
   traces.push(paperTrace, appTrace);
 
-  const plotDiv = document.getElementById('plot');
+  // 저장된 줌 상태 적용
+  if (savedXRange) layout.xaxis.range = savedXRange;
+  if (savedYRange) layout.yaxis.range = savedYRange;
 
   // 호버용 위치 맵 저장
   const idToPos = {};
   papers.forEach(p => { idToPos[p.id] = { x: p.x, y: p.y }; });
+
+  // 인용선 좌표 사전 계산 (O(n) 한번만)
+  const hoverLinesCache = new Map();
+  if (showCitations && citationLinks.length > 0) {
+    citationLinks.forEach(link => {
+      const source = idToPos[link.source];
+      const target = idToPos[link.target];
+      if (!source || !target) return;
+
+      // source가 인용하는 것 (refs)
+      if (!hoverLinesCache.has(link.source)) {
+        hoverLinesCache.set(link.source, { refX: [], refY: [], citedByX: [], citedByY: [] });
+      }
+      const srcCache = hoverLinesCache.get(link.source);
+      srcCache.refX.push(source.x, target.x, null);
+      srcCache.refY.push(source.y, target.y, null);
+
+      // target이 인용받는 것 (citedBy)
+      if (!hoverLinesCache.has(link.target)) {
+        hoverLinesCache.set(link.target, { refX: [], refY: [], citedByX: [], citedByY: [] });
+      }
+      const tgtCache = hoverLinesCache.get(link.target);
+      tgtCache.citedByX.push(source.x, target.x, null);
+      tgtCache.citedByY.push(source.y, target.y, null);
+    });
+  }
 
   Plotly.newPlot(plotDiv, traces, layout, config).then(function() {
     plotDiv.on('plotly_click', function(data) {
@@ -317,30 +362,19 @@ function render(filteredPapers) {
         showHoverPreview(hoveredItem);
       }
 
-      // 호버 시 인용선 표시
+      // 호버 시 인용선 표시 (사전 계산된 캐시 사용)
       if (selectedPaper !== null) return;
       if (!showCitations || citationLinks.length === 0) return;
 
-      const hoveredId = hoveredItem.id;
-
-      // 단일 trace로 모든 선 그리기 (null로 구분)
-      const refX = [], refY = [], citedByX = [], citedByY = [];
-
-      citationLinks.forEach(link => {
-        const source = idToPos[link.source];
-        const target = idToPos[link.target];
-        if (!source || !target) return;
-
-        if (link.source === hoveredId) {
-          refX.push(source.x, target.x, null);
-          refY.push(source.y, target.y, null);
-        } else if (link.target === hoveredId) {
-          citedByX.push(source.x, target.x, null);
-          citedByY.push(source.y, target.y, null);
-        }
-      });
-
-      Plotly.restyle(plotDiv, { x: [refX, citedByX], y: [refY, citedByY] }, [refTraceIdx, citedByTraceIdx]);
+      const cached = hoverLinesCache.get(hoveredItem.id);
+      if (cached) {
+        Plotly.restyle(plotDiv, {
+          x: [cached.refX, cached.citedByX],
+          y: [cached.refY, cached.citedByY]
+        }, [refTraceIdx, citedByTraceIdx]);
+      } else {
+        Plotly.restyle(plotDiv, { x: [[], []], y: [[], []] }, [refTraceIdx, citedByTraceIdx]);
+      }
     });
 
     plotDiv.on('plotly_unhover', function() {

@@ -87,10 +87,16 @@ function showHoverPreview(item) {
   const typeClass = item.is_paper ? 'paper' : 'app';
   const typeLabel = item.is_paper ? 'Paper' : 'App/Service';
 
+  // 내부 인용 관계 확인
+  const hasRefs = citationLinks.some(l => l.source === item.id);
+  const hasCitedBy = citationLinks.some(l => l.target === item.id);
+  const isIsolated = !hasRefs && !hasCitedBy;
+
   document.getElementById('detailMeta').innerHTML = `
     <span class="badge ${typeClass}">${typeLabel}</span>
     <span class="badge cluster">Cluster ${item.cluster}</span>
     ${item.citation_count ? `<span class="badge" style="background: #ffd70033; color: #ffd700;">${item.citation_count} cited</span>` : ''}
+    ${isIsolated ? `<span class="badge" style="background: #6b728033; color: #6b7280;">🏝️ Isolated</span>` : ''}
     <br><br>
     <span><strong>Year:</strong> ${item.year || 'N/A'}</span>
     <span><strong>Venue:</strong> ${item.venue || 'N/A'}</span>
