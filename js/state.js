@@ -16,3 +16,4 @@ let connectedPapers = new Set();
 let allTags = new Set();
 let hoverTraceCount = 0;
 let hoveredPaper = null;
+let zoomScale = 1;

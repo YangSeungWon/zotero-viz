@@ -119,7 +119,7 @@ function render(filteredPapers) {
     type: 'scatter',
     name: 'Papers',
     marker: {
-      size: paperItems.map(p => getSize(p)),
+      size: paperItems.map(p => getSize(p) * zoomScale),
       color: paperItems.map(p => CLUSTER_COLORS[p.cluster % CLUSTER_COLORS.length]),
       opacity: paperItems.map(p => getOpacity(p, 0.8)),
       line: {
@@ -138,7 +138,7 @@ function render(filteredPapers) {
     type: 'scatter',
     showlegend: false,
     marker: {
-      size: glowItems.map(p => getSize(p) + 12),
+      size: glowItems.map(p => (getSize(p) + 12) * zoomScale),
       color: 'rgba(0, 255, 255, 0.3)',
       line: { width: 0 }
     },
@@ -160,7 +160,7 @@ function render(filteredPapers) {
     type: 'scatter',
     name: 'Apps/Services',
     marker: {
-      size: 14,
+      size: 14 * zoomScale,
       symbol: 'diamond',
       color: appItems.map(p => CLUSTER_COLORS[p.cluster % CLUSTER_COLORS.length]),
       opacity: appItems.map(p => getOpacity(p, 0.9)),
@@ -404,15 +404,13 @@ function render(filteredPapers) {
     const initialRange = initialXRange[1] - initialXRange[0];
 
     plotDiv.on('plotly_relayout', function(eventData) {
-      let scale = 1;
-
       if (eventData['xaxis.autorange'] || eventData['yaxis.autorange']) {
         // 더블클릭으로 리셋 시 원래 크기로
-        scale = 1;
+        zoomScale = 1;
       } else if (eventData['xaxis.range[0]'] !== undefined) {
         const newRange = eventData['xaxis.range[1]'] - eventData['xaxis.range[0]'];
         const zoomFactor = Math.sqrt(initialRange / newRange);
-        scale = Math.max(0.5, Math.min(5, zoomFactor)); // 0.5x ~ 5x 제한
+        zoomScale = Math.max(0.5, Math.min(5, zoomFactor)); // 0.5x ~ 5x 제한
       } else {
         return; // 다른 relayout 이벤트는 무시
       }
@@ -423,15 +421,15 @@ function render(filteredPapers) {
       const glowIdx = plotDiv.data.findIndex(t => t.marker?.color === 'rgba(0, 255, 255, 0.3)');
 
       if (paperIdx >= 0) {
-        const newPaperSizes = paperItems.map(p => getSize(p) * scale);
+        const newPaperSizes = paperItems.map(p => getSize(p) * zoomScale);
         Plotly.restyle(plotDiv, { 'marker.size': [newPaperSizes] }, [paperIdx]);
       }
       if (appIdx >= 0) {
-        const newAppSizes = appItems.map(() => 14 * scale);
+        const newAppSizes = appItems.map(() => 14 * zoomScale);
         Plotly.restyle(plotDiv, { 'marker.size': [newAppSizes] }, [appIdx]);
       }
       if (glowIdx >= 0 && glowItems.length > 0) {
-        const newGlowSizes = glowItems.map(p => (getSize(p) + 12) * scale);
+        const newGlowSizes = glowItems.map(p => (getSize(p) + 12) * zoomScale);
         Plotly.restyle(plotDiv, { 'marker.size': [newGlowSizes] }, [glowIdx]);
       }
     });
