@@ -386,7 +386,54 @@ button:hover {
   padding: 2px 0;
 }
 
-/* Hide Plotly tooltip when Ctrl pressed */
-body.ctrl-pressed .hoverlayer {
+/* Hide Plotly tooltip (using side panel instead) */
+.hoverlayer {
   display: none !important;
+}
+
+/* Default panel styles */
+.default-stats .stat-row {
+  padding: 6px 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.help-section {
+  background: var(--bg-tertiary);
+  padding: 12px;
+  border-radius: var(--radius-md);
+  margin-top: 8px;
+}
+
+.help-section h4 {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.help-section ul {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.help-section li {
+  margin-bottom: 4px;
+}
+
+.cluster-overview {
+  margin-top: 12px;
+}
+
+.cluster-overview h4 {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.cluster-overview .stat-row {
+  padding: 4px 0;
+  font-size: 12px;
+  color: var(--text-secondary);
 }

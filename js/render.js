@@ -299,21 +299,6 @@ function render(filteredPapers) {
       }
     });
 
-    // Ctrl+호버 시 인용선 미리보기
-    let ctrlPressed = false;
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Control') {
-        ctrlPressed = true;
-        document.body.classList.add('ctrl-pressed');
-      }
-    });
-    document.addEventListener('keyup', e => {
-      if (e.key === 'Control') {
-        ctrlPressed = false;
-        document.body.classList.remove('ctrl-pressed');
-      }
-    });
-
     // 호버용 빈 트레이스 2개 미리 추가 (refs, citedBy)
     Plotly.addTraces(plotDiv, [
       { x: [], y: [], mode: 'lines', type: 'scatter', line: { color: 'rgba(88, 166, 255, 0.6)', width: 2 }, hoverinfo: 'none', showlegend: false },
@@ -323,12 +308,20 @@ function render(filteredPapers) {
     const citedByTraceIdx = plotDiv.data.length - 1;
 
     plotDiv.on('plotly_hover', function(data) {
-      if (!ctrlPressed) return;
-      if (selectedPaper !== null) return;
-      if (!showCitations || citationLinks.length === 0) return;
       if (!data.points || !data.points[0] || !data.points[0].customdata) return;
 
-      const hoveredId = data.points[0].customdata.id;
+      const hoveredItem = data.points[0].customdata;
+
+      // 사이드패널에 호버 미리보기
+      if (typeof showHoverPreview === 'function') {
+        showHoverPreview(hoveredItem);
+      }
+
+      // 호버 시 인용선 표시
+      if (selectedPaper !== null) return;
+      if (!showCitations || citationLinks.length === 0) return;
+
+      const hoveredId = hoveredItem.id;
 
       // 단일 trace로 모든 선 그리기 (null로 구분)
       const refX = [], refY = [], citedByX = [], citedByY = [];
@@ -352,6 +345,11 @@ function render(filteredPapers) {
 
     plotDiv.on('plotly_unhover', function() {
       Plotly.restyle(plotDiv, { x: [[], []], y: [[], []] }, [refTraceIdx, citedByTraceIdx]);
+
+      // 선택된 논문 없으면 기본 패널로
+      if (selectedPaper === null && typeof showDefaultPanel === 'function') {
+        showDefaultPanel();
+      }
     });
 
     // 줌에 따라 마커 크기 조정

@@ -114,6 +114,7 @@ async function loadData() {
     currentFiltered = [...allPapers];
     render(currentFiltered);
     updateStats(currentFiltered);
+    showDefaultPanel();
 
     // Initialize mobile components
     const mobileTagFilter = document.getElementById('mobileTagFilter');

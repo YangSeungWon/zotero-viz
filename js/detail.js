@@ -5,11 +5,111 @@
 function clearSelection() {
   selectedPaper = null;
   connectedPapers = new Set();
-  const panel = document.getElementById('detailPanel');
-  panel.classList.remove('active');
-  panel.style.width = '';
-  setTimeout(() => Plotly.Plots.resize('plot'), 10);
   render(currentFiltered);
+  showDefaultPanel();
+}
+
+function showDefaultPanel() {
+  const panel = document.getElementById('detailPanel');
+  panel.classList.add('active');
+  const savedWidth = localStorage.getItem('detailPanelWidth');
+  if (savedWidth) panel.style.width = savedWidth;
+
+  // 닫기 버튼 숨기기
+  document.getElementById('closeDetail').style.display = 'none';
+
+  // 통계 계산
+  const papers = currentFiltered.length > 0 ? currentFiltered : allPapers;
+  const totalPapers = papers.filter(p => p.is_paper).length;
+  const totalApps = papers.filter(p => !p.is_paper).length;
+  const yearRange = papers.length > 0
+    ? `${Math.min(...papers.map(p => p.year).filter(Boolean))} - ${Math.max(...papers.map(p => p.year).filter(Boolean))}`
+    : 'N/A';
+
+  // 클러스터별 통계
+  const clusterStats = {};
+  papers.forEach(p => {
+    if (!clusterStats[p.cluster]) {
+      clusterStats[p.cluster] = { count: 0, label: p.cluster_label || '' };
+    }
+    clusterStats[p.cluster].count++;
+  });
+
+  let clusterHtml = Object.entries(clusterStats)
+    .sort((a, b) => b[1].count - a[1].count)
+    .map(([c, s]) => `<div class="stat-row"><span style="color: ${CLUSTER_COLORS[c % CLUSTER_COLORS.length]}">●</span> ${s.label || 'Cluster ' + c}: ${s.count}</div>`)
+    .join('');
+
+  document.getElementById('detailTitle').textContent = 'Paper Map';
+  document.getElementById('detailMeta').innerHTML = `
+    <div class="default-stats">
+      <div class="stat-row"><strong>📄 Papers:</strong> ${totalPapers}</div>
+      <div class="stat-row"><strong>💎 Apps:</strong> ${totalApps}</div>
+      <div class="stat-row"><strong>📅 Years:</strong> ${yearRange}</div>
+      <div class="stat-row"><strong>🔗 Citations:</strong> ${citationLinks.length}</div>
+    </div>
+  `;
+  document.getElementById('detailLinks').innerHTML = '';
+  document.getElementById('detailAbstract').innerHTML = `
+    <div class="help-section">
+      <h4>사용법</h4>
+      <ul>
+        <li>노드 <strong>클릭</strong>: 상세 정보</li>
+        <li><strong>Ctrl+호버</strong>: 인용 관계 미리보기</li>
+        <li><strong>더블클릭</strong>: 줌 리셋</li>
+        <li>왼쪽 클러스터 클릭: 필터</li>
+      </ul>
+    </div>
+  `;
+  document.getElementById('detailNotes').innerHTML = `
+    <div class="cluster-overview">
+      <h4>클러스터 분포</h4>
+      ${clusterHtml}
+    </div>
+  `;
+  document.getElementById('referencesSection').style.display = 'none';
+  document.getElementById('citedBySection').style.display = 'none';
+  document.getElementById('similarPapers').innerHTML = '';
+}
+
+function showHoverPreview(item) {
+  if (selectedPaper !== null) return; // 선택된 게 있으면 무시
+  if (window.innerWidth <= MOBILE_BREAKPOINT) return;
+
+  const panel = document.getElementById('detailPanel');
+  panel.classList.add('active');
+
+  // 닫기 버튼 숨기기 (호버 미리보기에서는)
+  document.getElementById('closeDetail').style.display = 'none';
+
+  document.getElementById('detailTitle').innerHTML = `<span style="opacity: 0.6; font-size: 12px;">미리보기</span><br>${item.title || 'Untitled'}`;
+
+  const typeClass = item.is_paper ? 'paper' : 'app';
+  const typeLabel = item.is_paper ? 'Paper' : 'App/Service';
+
+  document.getElementById('detailMeta').innerHTML = `
+    <span class="badge ${typeClass}">${typeLabel}</span>
+    <span class="badge cluster">Cluster ${item.cluster}</span>
+    ${item.citation_count ? `<span class="badge" style="background: #ffd70033; color: #ffd700;">${item.citation_count} cited</span>` : ''}
+    <br><br>
+    <span><strong>Year:</strong> ${item.year || 'N/A'}</span>
+    <span><strong>Venue:</strong> ${item.venue || 'N/A'}</span>
+    ${item.authors ? `<br><span><strong>Authors:</strong> ${item.authors.substring(0, 80)}${item.authors.length > 80 ? '...' : ''}</span>` : ''}
+  `;
+
+  let linksHtml = '';
+  if (item.url) linksHtml += `<a href="${item.url}" target="_blank">Open URL</a>`;
+  if (item.doi) linksHtml += `<a href="https://doi.org/${item.doi}" target="_blank">DOI</a>`;
+  document.getElementById('detailLinks').innerHTML = linksHtml;
+
+  const abstract = item.abstract || 'No abstract available.';
+  document.getElementById('detailAbstract').textContent =
+    abstract.length > 300 ? abstract.substring(0, 300) + '...' : abstract;
+
+  document.getElementById('detailNotes').innerHTML = '';
+  document.getElementById('referencesSection').style.display = 'none';
+  document.getElementById('citedBySection').style.display = 'none';
+  document.getElementById('similarPapers').innerHTML = '<p style="color: var(--text-muted); font-size: 12px;">클릭하여 상세 정보 보기</p>';
 }
 
 function showDetail(item) {
@@ -25,7 +125,9 @@ function showDetail(item) {
   if (savedWidth) {
     panel.style.width = savedWidth;
   }
-  setTimeout(() => Plotly.Plots.resize('plot'), 10);
+
+  // 닫기 버튼 표시 (선택된 논문이 있을 때)
+  document.getElementById('closeDetail').style.display = 'block';
 
   selectedPaper = item;
   connectedPapers = new Set();

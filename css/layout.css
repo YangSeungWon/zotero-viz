@@ -164,24 +164,18 @@ header h1 {
   color: var(--accent);
 }
 
-/* Detail panel */
+/* Detail panel (always visible) */
 .detail-panel {
-  width: 0;
-  min-width: 0;
+  width: 350px;
+  min-width: 250px;
+  max-width: 600px;
   background: var(--bg-secondary);
   border-left: 1px solid var(--border-color);
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 0;
-  position: relative;
-}
-
-.detail-panel.active {
-  width: 350px;
-  min-width: 250px;
-  max-width: 600px;
   padding: 16px;
   padding-left: 20px;
+  position: relative;
 }
 
 .resize-handle {
