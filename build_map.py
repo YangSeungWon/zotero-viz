@@ -194,9 +194,42 @@ def embed_with_openai(texts: list, model: str = "text-embedding-3-small") -> np.
 # 메인 로직
 # ============================================================
 
+def load_from_csv() -> pd.DataFrame:
+    """Load data from CSV files in current directory"""
+    csv_files = glob.glob("*.csv")
+    if not csv_files:
+        raise FileNotFoundError("No CSV files found in current directory")
+
+    print(f"\n[1/5] Loading {len(csv_files)} CSV file(s)...")
+    dfs = []
+    for csv_file in csv_files:
+        try:
+            csv_df = pd.read_csv(csv_file)
+            print(f"  - {csv_file}: {len(csv_df)} items")
+            dfs.append(csv_df)
+        except Exception as e:
+            print(f"  - {csv_file}: Error - {e}")
+
+    df = pd.concat(dfs, ignore_index=True)
+    return df
+
+
+def load_from_api() -> pd.DataFrame:
+    """Load data from Zotero API"""
+    from zotero_api import get_zotero_client, fetch_items_as_dataframe
+
+    print("\n[1/5] Loading from Zotero API...")
+    zot = get_zotero_client()
+    df = fetch_items_as_dataframe(zot)
+    print(f"  Loaded {len(df)} items from API")
+    return df
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Build paper map from Zotero CSV")
+    parser = argparse.ArgumentParser(description="Build paper map from Zotero CSV or API")
     parser.add_argument("--output", default="papers.json", help="Output JSON file")
+    parser.add_argument("--source", choices=["csv", "api"], default="csv",
+                        help="Data source: csv (default) or api (Zotero API)")
     parser.add_argument("--embedding", choices=["local", "local-large", "openai"], default="local",
                         help="Embedding: local (multilingual-MiniLM), local-large (multilingual-mpnet), openai")
     parser.add_argument("--clusters", type=int, default=0,
@@ -211,23 +244,20 @@ def main():
                         help="Only include items with notes")
     args = parser.parse_args()
 
-    # 1. CSV 로드 (현재 디렉토리의 모든 CSV 합치기)
-    csv_files = glob.glob("*.csv")
-    if not csv_files:
-        print("❌ No CSV files found in current directory")
+    # 1. 데이터 로드 (CSV 또는 API)
+    try:
+        if args.source == "api":
+            df = load_from_api()
+        else:
+            df = load_from_csv()
+    except FileNotFoundError as e:
+        print(f"❌ {e}")
+        return
+    except ValueError as e:
+        print(f"❌ API Error: {e}")
+        print("  Set ZOTERO_LIBRARY_ID and ZOTERO_API_KEY in .env file")
         return
 
-    print(f"\n[1/5] Loading {len(csv_files)} CSV file(s)...")
-    dfs = []
-    for csv_file in csv_files:
-        try:
-            csv_df = pd.read_csv(csv_file)
-            print(f"  - {csv_file}: {len(csv_df)} items")
-            dfs.append(csv_df)
-        except Exception as e:
-            print(f"  - {csv_file}: Error - {e}")
-
-    df = pd.concat(dfs, ignore_index=True)
     # 중복 제거 (Title + DOI 기준)
     before_dedup = len(df)
     df = df.drop_duplicates(subset=["Title", "DOI"], keep="first")
@@ -460,6 +490,7 @@ def main():
     for idx, row in df.iterrows():
         rec = {
             "id": int(idx),
+            "zotero_key": str(row.get("Key", "") or ""),  # Zotero item key for API sync
             "title": str(row.get("Title", "") or ""),
             "year": int(row["year_clean"]) if pd.notna(row["year_clean"]) else None,
             "authors": str(row.get("Author", "") or ""),
@@ -491,9 +522,13 @@ def main():
 
         records.append(rec)
 
-    # CSV 파일 수정 시간 (가장 최근 파일 기준)
-    csv_mtime = max(os.path.getmtime(f) for f in csv_files)
-    csv_updated = datetime.fromtimestamp(csv_mtime).strftime("%Y-%m-%d %H:%M")
+    # 데이터 소스 업데이트 시간
+    if args.source == "api":
+        data_updated = datetime.now().strftime("%Y-%m-%d %H:%M")
+    else:
+        csv_files = glob.glob("*.csv")
+        csv_mtime = max(os.path.getmtime(f) for f in csv_files) if csv_files else 0
+        data_updated = datetime.fromtimestamp(csv_mtime).strftime("%Y-%m-%d %H:%M")
 
     # 출력 데이터에 클러스터 중심점 포함
     output_data = {
@@ -502,7 +537,8 @@ def main():
         "cluster_labels": cluster_labels,
         "citation_links": existing_citation_links,  # 기존 citation links 보존
         "meta": {
-            "csv_updated": csv_updated,
+            "source": args.source,
+            "data_updated": data_updated,
             "map_built": datetime.now().strftime("%Y-%m-%d %H:%M"),
             "total_papers": sum(1 for r in records if r['is_paper']),
             "total_apps": sum(1 for r in records if not r['is_paper']),
