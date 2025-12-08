@@ -46,25 +46,12 @@ async function loadData() {
 
     // Populate cluster filter with labels
     const clusters = [...new Set(allPapers.map(p => p.cluster))].sort((a,b) => a-b);
-    const intersect1 = document.getElementById('intersectCluster1');
-    const intersect2 = document.getElementById('intersectCluster2');
     const clusterListEl = document.getElementById('clusterList');
 
     clusters.forEach(c => {
       const sample = allPapers.find(p => p.cluster === c);
       const label = clusterLabels[c] || sample?.cluster_label || '';
       const count = allPapers.filter(p => p.cluster === c).length;
-
-      // 교차점 선택
-      const opt1 = document.createElement('option');
-      opt1.value = c;
-      opt1.textContent = `${c}: ${label.substring(0, 20)}`;
-      intersect1.appendChild(opt1);
-
-      const opt2 = document.createElement('option');
-      opt2.value = c;
-      opt2.textContent = `${c}: ${label.substring(0, 20)}`;
-      intersect2.appendChild(opt2);
 
       // 클러스터 패널 아이템
       const item = document.createElement('div');
@@ -139,7 +126,6 @@ async function loadData() {
 }
 
 function filterPapers() {
-  const minYear = parseInt(document.getElementById('minYear').value) || 0;
   const minVenue = parseFloat(document.getElementById('minVenue').value) || 0;
   const papersOnly = document.getElementById('papersOnly').checked;
   const bookmarkedOnly = document.getElementById('bookmarkedOnly').checked;
@@ -149,7 +135,6 @@ function filterPapers() {
   return allPapers.filter(p => {
     // Default: only show papers with notes
     if (!p.has_notes) return false;
-    if (p.year && p.year < minYear) return false;
     if (p.venue_quality < minVenue) return false;
     if (papersOnly && !p.is_paper) return false;
     if (bookmarkedOnly && !bookmarkedPapers.has(p.id)) return false;
@@ -161,17 +146,16 @@ function filterPapers() {
       const searchText = `${p.title} ${p.authors || ''} ${p.abstract} ${p.notes || ''}`.toLowerCase();
       if (!searchText.includes(searchFilter)) return false;
     }
+    // Year range filter (from mini timeline brush)
+    if (yearRange) {
+      if (p.year && (p.year < yearRange.min || p.year > yearRange.max)) return false;
+    }
     return true;
   });
 }
 
 function updateStats(papers) {
-  const paperCount = papers.filter(p => p.is_paper).length;
-  const appCount = papers.filter(p => !p.is_paper).length;
-  const bookmarkCount = bookmarkedPapers.size;
-  const bookmarkText = bookmarkCount > 0 ? `, ${bookmarkCount} bookmarked` : '';
-  document.getElementById('stats').textContent =
-    `${papers.length} items (${paperCount} papers, ${appCount} apps/services${bookmarkText})`;
+  document.getElementById('stats').textContent = `${papers.length} items`;
 }
 
 function toggleBookmark(paperId) {

@@ -61,14 +61,21 @@ button:hover {
   background: var(--bg-tertiary);
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
-  padding: 4px 8px;
+  padding: 6px;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .theme-toggle:hover {
   background: var(--border-color);
+}
+
+.theme-toggle svg {
+  width: 16px;
+  height: 16px;
 }
 
 .close-btn {
@@ -120,6 +127,78 @@ button:hover {
 
 .missing-btn:hover {
   background: var(--border-color);
+}
+
+/* Header Dropdowns */
+.header-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.header-dropdown-btn {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.header-dropdown-btn:hover {
+  background: var(--border-color);
+}
+
+.header-dropdown-btn::after {
+  content: '▼';
+  font-size: 8px;
+  opacity: 0.7;
+}
+
+.header-dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  min-width: 140px;
+  z-index: var(--z-dropdown);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.header-dropdown.open .header-dropdown-menu {
+  display: block;
+}
+
+.header-dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.header-dropdown-item:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.header-dropdown-item:first-child {
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.header-dropdown-item:last-child {
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
 }
 
 /* Badges */
@@ -467,4 +546,121 @@ button:hover {
 
 #detailTitle .title-text {
   flex: 1;
+}
+
+/* View Toggle */
+.view-toggle {
+  display: flex;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: 2px;
+  gap: 2px;
+  margin-left: 16px;
+}
+
+.view-btn {
+  padding: 4px 12px;
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  transition: all var(--transition-fast);
+}
+
+.view-btn:hover {
+  color: var(--text-secondary);
+}
+
+.view-btn.active {
+  background: var(--accent);
+  color: white;
+}
+
+/* Mini Timeline */
+.mini-timeline {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  position: relative;
+}
+
+.mini-timeline-resize {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: ns-resize;
+  background: transparent;
+  transition: background var(--transition-fast);
+}
+
+.mini-timeline-resize:hover,
+.mini-timeline-resize.dragging {
+  background: var(--accent);
+}
+
+.mini-timeline.collapsed .mini-timeline-content {
+  display: none;
+}
+
+.mini-timeline.collapsed .mini-timeline-toggle {
+  transform: rotate(180deg);
+}
+
+.mini-timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 12px;
+  background: var(--bg-tertiary);
+}
+
+.mini-timeline-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.mini-timeline-toggle {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  transition: transform var(--transition-fast);
+}
+
+.mini-timeline-toggle:hover {
+  background: var(--border-color);
+}
+
+.mini-timeline-content {
+  position: relative;
+  height: 60px;
+  padding: 8px 12px;
+}
+
+#timelineCanvas {
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+
+.brush-selection {
+  position: absolute;
+  top: 8px;
+  height: calc(100% - 16px);
+  background: rgba(88, 166, 255, 0.2);
+  border: 1px solid rgba(88, 166, 255, 0.5);
+  border-radius: 2px;
+  pointer-events: none;
+  display: none;
+}
+
+.brush-selection.active {
+  display: block;
 }

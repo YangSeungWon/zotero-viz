@@ -40,10 +40,17 @@ header h1 {
   overflow: hidden;
 }
 
-/* Plot */
-#plot {
+/* Plot Container */
+.plot-container {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#plot, #timelinePlot {
+  flex: 1;
+  min-height: 0;
 }
 
 /* Cluster Panel */

@@ -16,6 +16,14 @@
   // Initialize mobile handlers
   initMobileHandlers();
 
-  // Load data
-  loadData();
+  // Load data and initialize timeline
+  loadData().then(() => {
+    // Initialize mini timeline after data is loaded
+    if (typeof renderMiniTimeline === 'function') {
+      renderMiniTimeline(allPapers);
+    }
+    if (typeof initMiniTimelineBrush === 'function') {
+      initMiniTimelineBrush();
+    }
+  });
 })();

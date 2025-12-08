@@ -19,3 +19,5 @@ let hoverTraceCount = 0;
 let hoveredPaper = null;
 let zoomScale = 1;
 let bookmarkedPapers = new Set();
+let currentView = 'map'; // 'map' or 'timeline'
+let yearRange = null; // { min, max } for mini timeline filter

@@ -79,44 +79,6 @@ function closeStatsTooltip(e) {
   }
 }
 
-// Intersection finding
-function findIntersectionPapers(cluster1, cluster2, threshold = 0.3) {
-  const c1 = clusterCentroids[cluster1];
-  const c2 = clusterCentroids[cluster2];
-
-  if (!c1 || !c2) {
-    const c1Papers = allPapers.filter(p => p.cluster === cluster1);
-    const c2Papers = allPapers.filter(p => p.cluster === cluster2);
-
-    const centroid1 = {
-      x: c1Papers.reduce((s, p) => s + p.x, 0) / c1Papers.length,
-      y: c1Papers.reduce((s, p) => s + p.y, 0) / c1Papers.length
-    };
-    const centroid2 = {
-      x: c2Papers.reduce((s, p) => s + p.x, 0) / c2Papers.length,
-      y: c2Papers.reduce((s, p) => s + p.y, 0) / c2Papers.length
-    };
-
-    return findPapersNearBothCentroids(centroid1, centroid2, threshold);
-  }
-
-  return findPapersNearBothCentroids(c1, c2, threshold);
-}
-
-function findPapersNearBothCentroids(c1, c2, threshold) {
-  const distBetween = Math.sqrt(Math.pow(c2.x - c1.x, 2) + Math.pow(c2.y - c1.y, 2));
-
-  return allPapers
-    .map(p => {
-      const d1 = Math.sqrt(Math.pow(p.x - c1.x, 2) + Math.pow(p.y - c1.y, 2));
-      const d2 = Math.sqrt(Math.pow(p.x - c2.x, 2) + Math.pow(p.y - c2.y, 2));
-      const ratio = (d1 + d2) / distBetween;
-      return { ...p, intersectionScore: ratio, d1, d2 };
-    })
-    .filter(p => p.intersectionScore <= 1 + threshold)
-    .sort((a, b) => a.intersectionScore - b.intersectionScore);
-}
-
 // Filter status
 const filterStatus = document.getElementById('filterStatus');
 let statusTimer = null;
@@ -137,7 +99,11 @@ function showFilterStatus(status) {
 // Apply filters
 function applyFilters() {
   currentFiltered = filterPapers();
-  render(currentFiltered);
+  if (currentView === 'map') {
+    render(currentFiltered);
+  } else {
+    renderTimeline(currentFiltered);
+  }
   updateStats(currentFiltered);
   showFilterStatus('done');
 
@@ -186,18 +152,29 @@ function applyTheme(theme) {
   const themeToggle = document.getElementById('themeToggle');
   const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
 
+  let icon, emoji;
   if (theme === 'auto') {
     html.dataset.theme = systemDark.matches ? '' : 'light';
-    themeToggle.textContent = '🔄';
-    themeToggle.title = 'Theme: Auto (System)';
+    icon = 'sun-moon';
+    emoji = '◐';
+    themeToggle.title = 'Theme: Auto';
   } else if (theme === 'light') {
     html.dataset.theme = 'light';
-    themeToggle.textContent = '☀️';
+    icon = 'sun';
+    emoji = '☀️';
     themeToggle.title = 'Theme: Light';
   } else {
     html.dataset.theme = '';
-    themeToggle.textContent = '🌙';
+    icon = 'moon';
+    emoji = '🌙';
     themeToggle.title = 'Theme: Dark';
+  }
+
+  if (typeof lucide !== 'undefined') {
+    themeToggle.innerHTML = `<i data-lucide="${icon}"></i>`;
+    lucide.createIcons();
+  } else {
+    themeToggle.textContent = emoji;
   }
 }
 
@@ -206,23 +183,34 @@ function initUIHandlers() {
   const debouncedApplyFilters = debounce(applyFilters, 200);
 
   // Filter handlers
-  document.getElementById('minYear').addEventListener('change', applyFilters);
   document.getElementById('minVenue').addEventListener('change', applyFilters);
   document.getElementById('papersOnly').addEventListener('change', applyFilters);
   document.getElementById('bookmarkedOnly').addEventListener('change', applyFilters);
   document.getElementById('tagFilter').addEventListener('change', applyFilters);
   document.getElementById('searchFilter').addEventListener('input', debouncedApplyFilters);
 
+  // View toggle handlers
+  document.querySelectorAll('.view-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      switchView(btn.dataset.view);
+    });
+  });
+
+  // Mini timeline toggle
+  const miniTimelineToggle = document.getElementById('toggleMiniTimeline');
+  if (miniTimelineToggle) {
+    miniTimelineToggle.addEventListener('click', () => {
+      document.getElementById('miniTimeline').classList.toggle('collapsed');
+    });
+  }
+
   // Reset
   document.getElementById('resetFilter').addEventListener('click', () => {
-    document.getElementById('minYear').value = '1990';
     document.getElementById('minVenue').value = '0';
     document.getElementById('papersOnly').checked = false;
     document.getElementById('bookmarkedOnly').checked = false;
     document.getElementById('tagFilter').value = '';
     document.getElementById('searchFilter').value = '';
-    document.getElementById('intersectCluster1').value = '';
-    document.getElementById('intersectCluster2').value = '';
     document.getElementById('showCitations').checked = true;
     showCitations = true;
     highlightCluster = null;
@@ -232,9 +220,19 @@ function initUIHandlers() {
     document.querySelectorAll('.cluster-item').forEach(el => el.classList.remove('active'));
     selectedPaper = null;
     connectedPapers = new Set();
+    yearRange = null;
+    const brushSelection = document.getElementById('brushSelection');
+    if (brushSelection) brushSelection.classList.remove('active');
     document.getElementById('detailPanel').classList.remove('active');
     currentFiltered = [...allPapers];
-    render(currentFiltered);
+    if (currentView === 'map') {
+      render(currentFiltered);
+    } else {
+      renderTimeline(currentFiltered);
+    }
+    if (typeof renderMiniTimeline === 'function') {
+      renderMiniTimeline(allPapers);
+    }
     updateStats(currentFiltered);
   });
 
@@ -254,32 +252,6 @@ function initUIHandlers() {
     });
   });
   document.querySelector(`.mode-option[data-mode="${filterMode}"]`).classList.add('active');
-
-  // Intersection finder
-  document.getElementById('findIntersection').addEventListener('click', () => {
-    const c1 = document.getElementById('intersectCluster1').value;
-    const c2 = document.getElementById('intersectCluster2').value;
-
-    if (!c1 || !c2) {
-      alert('Please select two clusters');
-      return;
-    }
-    if (c1 === c2) {
-      alert('Please select different clusters');
-      return;
-    }
-
-    const intersectionPapers = findIntersectionPapers(parseInt(c1), parseInt(c2));
-    if (intersectionPapers.length === 0) {
-      alert('No intersection papers found');
-      return;
-    }
-
-    currentFiltered = intersectionPapers;
-    render(currentFiltered);
-    updateStats(currentFiltered);
-    document.getElementById('stats').textContent += ` | Intersection: C${c1} ↔ C${c2}`;
-  });
 
   // Theme toggle
   const themeToggle = document.getElementById('themeToggle');
@@ -353,6 +325,47 @@ function initUIHandlers() {
       localStorage.setItem('detailPanelWidth', detailPanel.style.width);
     }
   });
+
+  // Mini timeline resize
+  const miniTimelineResize = document.getElementById('miniTimelineResize');
+  const miniTimelineContent = document.querySelector('.mini-timeline-content');
+  let isResizingTimeline = false;
+
+  if (miniTimelineResize && miniTimelineContent) {
+    // Restore saved height
+    const savedHeight = localStorage.getItem('miniTimelineHeight');
+    if (savedHeight) {
+      miniTimelineContent.style.height = savedHeight;
+    }
+
+    miniTimelineResize.addEventListener('mousedown', (e) => {
+      isResizingTimeline = true;
+      miniTimelineResize.classList.add('dragging');
+      document.body.style.cursor = 'ns-resize';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isResizingTimeline) return;
+      const containerRect = document.querySelector('.plot-container').getBoundingClientRect();
+      const newHeight = containerRect.bottom - e.clientY - 28; // 28px for header
+      if (newHeight >= 40 && newHeight <= 200) {
+        miniTimelineContent.style.height = newHeight + 'px';
+        renderMiniTimeline(allPapers);
+      }
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (isResizingTimeline) {
+        isResizingTimeline = false;
+        miniTimelineResize.classList.remove('dragging');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        localStorage.setItem('miniTimelineHeight', miniTimelineContent.style.height);
+      }
+    });
+  }
 
   // Missing papers modal
   const missingModal = document.getElementById('missingModal');
@@ -663,5 +676,30 @@ C     Toggle citation lines
 Hover   Preview paper & citation lines`);
         break;
     }
+  });
+
+  // Header dropdown handlers
+  document.querySelectorAll('.header-dropdown').forEach(dropdown => {
+    const btn = dropdown.querySelector('.header-dropdown-btn');
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Close other dropdowns
+      document.querySelectorAll('.header-dropdown').forEach(d => {
+        if (d !== dropdown) d.classList.remove('open');
+      });
+      dropdown.classList.toggle('open');
+    });
+  });
+
+  // Close dropdowns when clicking outside
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.header-dropdown').forEach(d => d.classList.remove('open'));
+  });
+
+  // Close dropdown after selecting item
+  document.querySelectorAll('.header-dropdown-item').forEach(item => {
+    item.addEventListener('click', () => {
+      item.closest('.header-dropdown').classList.remove('open');
+    });
   });
 }

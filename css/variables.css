@@ -33,6 +33,7 @@
 
   /* Z-index layers */
   --z-tooltip: 100;
+  --z-dropdown: 200;
   --z-modal: 1000;
   --z-mobile-menu: 1001;
 }

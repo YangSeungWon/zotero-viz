@@ -5,13 +5,24 @@ Semantic Scholar API를 사용해 논문의 피인용 수와 인용 관계를 �
 
 import argparse
 import json
+import os
 import time
 import requests
 from pathlib import Path
 
+# Load .env if exists
+env_path = Path(__file__).parent / ".env"
+if env_path.exists():
+    for line in env_path.read_text().strip().split("\n"):
+        if "=" in line and not line.startswith("#"):
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k.strip(), v.strip())
+
 # Semantic Scholar API
 BASE_URL = "https://api.semanticscholar.org/graph/v1"
 FIELDS = "citationCount,citations.paperId,citations.title,references.paperId,references.title"
+API_KEY = os.environ.get("S2_API_KEY")
+HEADERS = {"x-api-key": API_KEY} if API_KEY else {}
 
 def get_paper_by_doi(doi: str, retry=3) -> dict:
     """DOI로 논문 정보 가져오기"""
@@ -20,7 +31,7 @@ def get_paper_by_doi(doi: str, retry=3) -> dict:
 
     for attempt in range(retry):
         try:
-            resp = requests.get(url, params=params, timeout=15)
+            resp = requests.get(url, params=params, headers=HEADERS, timeout=15)
             if resp.status_code == 200:
                 return resp.json()
             elif resp.status_code == 404:
@@ -72,7 +83,7 @@ def get_paper_by_title(title: str, retry=3) -> dict:
 
     for attempt in range(retry):
         try:
-            resp = requests.get(url, params=params, timeout=15)
+            resp = requests.get(url, params=params, headers=HEADERS, timeout=15)
             if resp.status_code == 200:
                 data = resp.json()
                 if data.get("data") and len(data["data"]) > 0:

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Paper Map</title>
   <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="css/variables.css">
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/components.css">
@@ -13,19 +14,33 @@
 <body>
   <header>
     <h1>Paper Map</h1>
+    <div class="view-toggle" id="viewToggle">
+      <button class="view-btn active" data-view="map">Map</button>
+      <button class="view-btn" data-view="timeline">Timeline</button>
+    </div>
     <button class="hamburger-btn" id="hamburgerBtn" aria-label="Menu">
       <span></span>
       <span></span>
       <span></span>
     </button>
-    <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
+    <button class="theme-toggle" id="themeToggle" title="Toggle theme">◐</button>
     <div class="stats" id="stats">Loading...</div>
     <span class="filter-status" id="filterStatus"></span>
-    <button class="missing-btn" id="showGlobalStats" title="Global statistics">📈 Stats</button>
-    <button class="missing-btn" id="copyClusters" title="Copy cluster paper list">📋 Clusters</button>
-    <button class="missing-btn" id="copyFiltered" title="Copy filtered papers with notes">📝 Export</button>
-    <button class="missing-btn" id="showClassics" title="Highly cited foundational papers" style="color: #58a6ff;">📚 Classics</button>
-    <button class="missing-btn" id="showNewWork" title="Recent papers citing your library" style="color: #f97316;">🆕 New</button>
+    <div class="header-dropdown" id="dataDropdown">
+      <button class="header-dropdown-btn">📊 Data</button>
+      <div class="header-dropdown-menu">
+        <button class="header-dropdown-item" id="showGlobalStats">📈 Stats</button>
+        <button class="header-dropdown-item" id="copyClusters">📋 Clusters</button>
+        <button class="header-dropdown-item" id="copyFiltered">📝 Export</button>
+      </div>
+    </div>
+    <div class="header-dropdown" id="discoverDropdown">
+      <button class="header-dropdown-btn">🔍 Discover</button>
+      <div class="header-dropdown-menu">
+        <button class="header-dropdown-item" id="showClassics" style="color: #58a6ff;">📚 Classics</button>
+        <button class="header-dropdown-item" id="showNewWork" style="color: #f97316;">🆕 New</button>
+      </div>
+    </div>
     <div class="legend">
       <div class="legend-item">
         <div class="legend-dot" style="background: #58a6ff;"></div>
@@ -46,11 +61,7 @@
     </div>
     <div class="controls">
       <div class="control-group">
-        <label>Min Year:</label>
-        <input type="number" id="minYear" value="1990" min="1990" max="2025">
-      </div>
-      <div class="control-group">
-        <label>Min Venue Quality:</label>
+        <label>Venue:</label>
         <select id="minVenue">
           <option value="0">All</option>
           <option value="3">3+</option>
@@ -75,17 +86,6 @@
       <div class="control-group">
         <label>Search:</label>
         <input type="text" id="searchFilter" placeholder="Title/Author/Abstract" style="width: 120px;">
-      </div>
-      <div class="control-group" style="border-left: 1px solid #30363d; padding-left: 16px;">
-        <label>Intersection:</label>
-        <select id="intersectCluster1" style="width: 90px;">
-          <option value="">C1</option>
-        </select>
-        <span style="color: #8b949e;">↔</span>
-        <select id="intersectCluster2" style="width: 90px;">
-          <option value="">C2</option>
-        </select>
-        <button id="findIntersection" style="background: #8b5cf6;">Find</button>
       </div>
       <div class="control-group">
         <input type="checkbox" id="showCitations" checked>
@@ -168,7 +168,21 @@
       </div>
       <div id="clusterList"></div>
     </div>
-    <div id="plot"></div>
+    <div class="plot-container">
+      <div id="plot"></div>
+      <div id="timelinePlot" style="display: none;"></div>
+      <div class="mini-timeline" id="miniTimeline">
+        <div class="mini-timeline-resize" id="miniTimelineResize"></div>
+        <div class="mini-timeline-header">
+          <span class="mini-timeline-label">Timeline</span>
+          <button class="mini-timeline-toggle" id="toggleMiniTimeline" title="Toggle mini timeline">▼</button>
+        </div>
+        <div class="mini-timeline-content">
+          <canvas id="timelineCanvas"></canvas>
+          <div class="brush-selection" id="brushSelection"></div>
+        </div>
+      </div>
+    </div>
     <div class="detail-panel" id="detailPanel">
       <div class="resize-handle" id="resizeHandle"></div>
       <button class="close-btn" id="closeDetail" title="Close">✕</button>
@@ -228,6 +242,7 @@
   <script src="js/state.js"></script>
   <script src="js/data.js"></script>
   <script src="js/render.js"></script>
+  <script src="js/timeline.js"></script>
   <script src="js/detail.js"></script>
   <script src="js/mobile.js"></script>
   <script src="js/ui.js"></script>
