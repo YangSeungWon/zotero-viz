@@ -4,8 +4,6 @@ Zotero 라이브러리를 시각화하는 인터랙티브 논문 지도
 
 [English](README.md)
 
-![Paper Map](https://img.shields.io/badge/papers-242-blue) ![Links](https://img.shields.io/badge/citation%20links-420-orange)
-
 ## Features
 
 - **클러스터링**: UMAP + KMeans로 유사 논문 그룹화
@@ -26,7 +24,7 @@ python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
-# 2. Zotero에서 CSV 내보내기 (semantel.csv)
+# 2. Zotero에서 CSV 내보내기 (zotero_export.csv)
 
 # 3. 맵 생성 + citation 데이터 가져오기
 python update.py
@@ -91,7 +89,7 @@ python build_map.py --embedding openai       # OpenAI 임베딩 사용
 zotero-viz/
 ├── index.html              # 메인 시각화 페이지
 ├── papers.json             # 논문 데이터 + citation links
-├── semantel.csv            # Zotero 내보내기 CSV
+├── zotero_export.csv            # Zotero 내보내기 CSV
 ├── build_map.py            # 맵 빌더
 ├── fetch_citations.py      # S2 API
 ├── fetch_citations_crossref.py  # CrossRef API

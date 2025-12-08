@@ -4,8 +4,6 @@ Interactive visualization map for your Zotero library
 
 [한국어](README_ko.md)
 
-![Paper Map](https://img.shields.io/badge/papers-242-blue) ![Links](https://img.shields.io/badge/citation%20links-420-orange)
-
 ## Features
 
 - **Clustering**: Group similar papers using UMAP + KMeans
@@ -26,7 +24,7 @@ python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
-# 2. Export CSV from Zotero (semantel.csv)
+# 2. Export CSV from Zotero (zotero_export.csv)
 
 # 3. Build map + fetch citation data
 python update.py
@@ -91,7 +89,7 @@ python build_map.py --embedding openai       # Use OpenAI embeddings
 zotero-viz/
 ├── index.html              # Main visualization page
 ├── papers.json             # Paper data + citation links
-├── semantel.csv            # Zotero export CSV
+├── zotero_export.csv            # Zotero export CSV
 ├── build_map.py            # Map builder
 ├── fetch_citations.py      # S2 API
 ├── fetch_citations_crossref.py  # CrossRef API
