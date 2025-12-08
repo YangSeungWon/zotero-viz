@@ -32,6 +32,8 @@
         <button class="header-dropdown-item" id="showGlobalStats">📈 Stats</button>
         <button class="header-dropdown-item" id="copyClusters">📋 Clusters</button>
         <button class="header-dropdown-item" id="copyFiltered">📝 Export</button>
+        <button class="header-dropdown-item" id="syncClusterTags">🔄 Sync Clusters</button>
+        <button class="header-dropdown-item" id="batchTagManager">🏷️ Batch Tags</button>
       </div>
     </div>
     <div class="header-dropdown" id="discoverDropdown">
@@ -209,6 +211,37 @@
     </div>
   </div>
 
+  <!-- Batch Tag Modal -->
+  <div class="modal-overlay" id="batchTagModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>🏷️ Batch Tag Management</h3>
+        <button class="modal-close" id="closeBatchTag">✕</button>
+      </div>
+      <div class="modal-content">
+        <p class="modal-desc">Apply to <strong id="batchCount">0</strong> currently filtered papers</p>
+        <div class="batch-controls">
+          <div class="control-group" style="margin-bottom: 12px;">
+            <label>Action:</label>
+            <select id="batchAction" style="width: 120px;">
+              <option value="add">Add tag</option>
+              <option value="remove">Remove tag</option>
+            </select>
+          </div>
+          <div class="control-group" style="margin-bottom: 12px;">
+            <label>Tag:</label>
+            <input type="text" id="batchTagInput" placeholder="Enter tag..." style="width: 200px;">
+          </div>
+          <button id="executeBatchTag" style="width: 100%;">Apply to filtered papers</button>
+        </div>
+        <div id="batchProgress" style="display: none; margin-top: 16px;">
+          <div class="progress-bar"><div class="progress-fill" id="batchProgressFill"></div></div>
+          <p class="progress-status" id="batchProgressStatus"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Mobile Bottom Sheet -->
   <div class="bottom-sheet" id="bottomSheet">
     <div class="bottom-sheet-handle" id="bottomSheetHandle"></div>
@@ -249,6 +282,7 @@
   <!-- JavaScript modules -->
   <script src="js/config.js"></script>
   <script src="js/state.js"></script>
+  <script src="js/api.js"></script>
   <script src="js/data.js"></script>
   <script src="js/render.js"></script>
   <script src="js/timeline.js"></script>

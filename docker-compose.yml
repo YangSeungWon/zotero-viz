@@ -9,4 +9,17 @@ services:
       - ./js:/usr/share/nginx/html/js:ro
       - ./papers.json:/usr/share/nginx/html/papers.json:ro
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  api:
+    build: .
+    volumes:
+      - .:/app
+    environment:
+      - ZOTERO_LIBRARY_ID=${ZOTERO_LIBRARY_ID}
+      - ZOTERO_API_KEY=${ZOTERO_API_KEY}
+      - ZOTERO_LIBRARY_TYPE=${ZOTERO_LIBRARY_TYPE}
+      - APP_API_KEY=${APP_API_KEY}
     restart: unless-stopped

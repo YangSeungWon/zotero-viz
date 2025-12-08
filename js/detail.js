@@ -2,6 +2,154 @@
    Detail Panel (Desktop & Mobile)
    =========================================== */
 
+// ============================================================
+// Tag Editor
+// ============================================================
+
+function renderTagEditor(item) {
+  const currentTags = item.tags
+    ? item.tags.split(/[;,]/).map(t => t.trim()).filter(Boolean)
+    : [];
+
+  const tagsHtml = currentTags.map(tag => `
+    <span class="tag-chip" data-tag="${tag}">
+      ${tag}
+      <button class="tag-remove" data-tag="${tag}" title="Remove tag">&times;</button>
+    </span>
+  `).join('');
+
+  return `
+    <div class="tag-editor" data-zotero-key="${item.zotero_key || ''}" data-paper-id="${item.id}">
+      <div class="tag-label"><strong>Tags:</strong></div>
+      <div class="tag-list">${tagsHtml || '<span class="no-tags">No tags</span>'}</div>
+      <div class="tag-input-container">
+        <input type="text" class="tag-input" placeholder="Add tag..." autocomplete="off">
+        <div class="tag-autocomplete"></div>
+      </div>
+    </div>
+  `;
+}
+
+function initTagEditor(item) {
+  const editor = document.querySelector('.tag-editor');
+  if (!editor) return;
+
+  const input = editor.querySelector('.tag-input');
+  const autocomplete = editor.querySelector('.tag-autocomplete');
+  const tagList = editor.querySelector('.tag-list');
+  const zoteroKey = editor.dataset.zoteroKey;
+  const paperId = parseInt(editor.dataset.paperId);
+
+  // Current tags
+  let currentTags = item.tags
+    ? item.tags.split(/[;,]/).map(t => t.trim()).filter(Boolean)
+    : [];
+
+  // Remove tag handler
+  tagList.addEventListener('click', async (e) => {
+    if (e.target.classList.contains('tag-remove')) {
+      const tagToRemove = e.target.dataset.tag;
+      currentTags = currentTags.filter(t => t !== tagToRemove);
+      await saveTagsToZotero(zoteroKey, currentTags, paperId);
+      updateTagDisplay();
+    }
+  });
+
+  // Input handlers
+  input.addEventListener('input', () => {
+    const query = input.value.trim().toLowerCase();
+    if (query.length === 0) {
+      autocomplete.classList.remove('active');
+      return;
+    }
+
+    // Filter tags from allTags
+    const suggestions = [...allTags]
+      .filter(tag => tag.toLowerCase().includes(query) && !currentTags.includes(tag))
+      .slice(0, 8);
+
+    if (suggestions.length === 0) {
+      autocomplete.classList.remove('active');
+      return;
+    }
+
+    autocomplete.innerHTML = suggestions.map(tag =>
+      `<div class="tag-autocomplete-item" data-tag="${tag}">${tag}</div>`
+    ).join('');
+    autocomplete.classList.add('active');
+  });
+
+  // Autocomplete selection
+  autocomplete.addEventListener('click', async (e) => {
+    if (e.target.classList.contains('tag-autocomplete-item')) {
+      const tag = e.target.dataset.tag;
+      if (!currentTags.includes(tag)) {
+        currentTags.push(tag);
+        await saveTagsToZotero(zoteroKey, currentTags, paperId);
+        updateTagDisplay();
+      }
+      input.value = '';
+      autocomplete.classList.remove('active');
+    }
+  });
+
+  // Enter to add new tag
+  input.addEventListener('keydown', async (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const tag = input.value.trim();
+      if (tag && !currentTags.includes(tag)) {
+        currentTags.push(tag);
+        await saveTagsToZotero(zoteroKey, currentTags, paperId);
+        updateTagDisplay();
+      }
+      input.value = '';
+      autocomplete.classList.remove('active');
+    } else if (e.key === 'Escape') {
+      autocomplete.classList.remove('active');
+    }
+  });
+
+  // Close autocomplete on outside click
+  document.addEventListener('click', (e) => {
+    if (!editor.contains(e.target)) {
+      autocomplete.classList.remove('active');
+    }
+  });
+
+  function updateTagDisplay() {
+    const tagsHtml = currentTags.map(tag => `
+      <span class="tag-chip" data-tag="${tag}">
+        ${tag}
+        <button class="tag-remove" data-tag="${tag}" title="Remove tag">&times;</button>
+      </span>
+    `).join('');
+    tagList.innerHTML = tagsHtml || '<span class="no-tags">No tags</span>';
+  }
+}
+
+async function saveTagsToZotero(zoteroKey, tags, paperId) {
+  if (!zoteroKey) {
+    showToast('Error', 'No Zotero key - cannot sync');
+    return;
+  }
+
+  try {
+    const result = await updatePaperTags(zoteroKey, tags);
+    if (result.success) {
+      // Update local state
+      updateLocalPaperTags(paperId, tags);
+      showToast('Tags saved', tags.join(', ') || 'No tags');
+    }
+  } catch (e) {
+    showToast('Error', e.message);
+  }
+}
+
+// ============================================================
+// Panel Functions
+// ============================================================
+
 function clearSelection() {
   selectedPaper = null;
   connectedPapers = new Set();
@@ -223,8 +371,12 @@ function showDetail(item) {
     <span><strong>Quality:</strong> ${item.venue_quality}/5</span>
     ${item.citation_count !== null ? `<span><strong>Citations:</strong> ${item.citation_count}</span>` : ''}
     ${item.authors ? `<br><span><strong>Authors:</strong> ${item.authors.substring(0, 100)}${item.authors.length > 100 ? '...' : ''}</span>` : ''}
-    ${item.tags ? `<br><span><strong>Tags:</strong> ${item.tags}</span>` : ''}
   `;
+
+  // Tag editor
+  const tagEditorHtml = renderTagEditor(item);
+  document.getElementById('detailMeta').innerHTML += tagEditorHtml;
+  initTagEditor(item);
 
   let linksHtml = '';
   if (item.url) {

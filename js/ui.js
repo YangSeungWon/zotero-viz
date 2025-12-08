@@ -718,4 +718,127 @@ Hover   Preview paper & citation lines`);
       item.closest('.header-dropdown').classList.remove('open');
     });
   });
+
+  // ============================================================
+  // Cluster Tag Sync
+  // ============================================================
+  document.getElementById('syncClusterTags').addEventListener('click', async () => {
+    const clusterCount = Object.keys(clusterLabels).length;
+    const paperCount = allPapers.length;
+
+    if (!confirm(`클러스터 라벨을 Zotero 태그로 동기화합니다.\n\n${clusterCount}개 클러스터, ${paperCount}개 논문\n태그 형식: "cluster: [라벨명]"\n\n계속하시겠습니까?`)) {
+      return;
+    }
+
+    try {
+      showToast('동기화 중...', '클러스터 태그를 Zotero에 동기화하는 중입니다.');
+
+      const result = await syncClusterTags('cluster:', clusterLabels);
+
+      showToast(
+        '동기화 완료',
+        `성공: ${result.success || 0}, 실패: ${result.failed || 0}, 건너뜀: ${result.skipped || 0}`
+      );
+    } catch (e) {
+      alert('동기화 실패: ' + e.message);
+    }
+  });
+
+  // ============================================================
+  // Batch Tag Management
+  // ============================================================
+  const batchTagModal = document.getElementById('batchTagModal');
+  const batchCount = document.getElementById('batchCount');
+  const batchTagInput = document.getElementById('batchTagInput');
+  const batchAction = document.getElementById('batchAction');
+  const batchProgress = document.getElementById('batchProgress');
+  const batchProgressFill = document.getElementById('batchProgressFill');
+  const batchProgressStatus = document.getElementById('batchProgressStatus');
+
+  // Open batch tag modal
+  document.getElementById('batchTagManager').addEventListener('click', () => {
+    batchCount.textContent = currentFiltered.length;
+    batchTagInput.value = '';
+    batchProgress.style.display = 'none';
+    batchTagModal.classList.add('active');
+    batchTagInput.focus();
+  });
+
+  // Close batch tag modal
+  document.getElementById('closeBatchTag').addEventListener('click', () => {
+    batchTagModal.classList.remove('active');
+  });
+
+  batchTagModal.addEventListener('click', (e) => {
+    if (e.target === batchTagModal) {
+      batchTagModal.classList.remove('active');
+    }
+  });
+
+  // Execute batch tag operation
+  document.getElementById('executeBatchTag').addEventListener('click', async () => {
+    const tag = batchTagInput.value.trim();
+    const action = batchAction.value;
+
+    if (!tag) {
+      alert('태그를 입력하세요.');
+      return;
+    }
+
+    const papers = currentFiltered;
+    if (papers.length === 0) {
+      alert('필터된 논문이 없습니다.');
+      return;
+    }
+
+    const zoteroKeys = papers.map(p => p.id).filter(Boolean);
+    if (zoteroKeys.length === 0) {
+      alert('Zotero key가 있는 논문이 없습니다.');
+      return;
+    }
+
+    const actionText = action === 'add' ? '추가' : '제거';
+    if (!confirm(`${zoteroKeys.length}개 논문에 태그 "${tag}"를 ${actionText}합니다.\n계속하시겠습니까?`)) {
+      return;
+    }
+
+    // Show progress
+    batchProgress.style.display = 'block';
+    batchProgressFill.style.width = '0%';
+    batchProgressStatus.textContent = '처리 중...';
+
+    try {
+      const result = await batchTagOperationWithProgress(action, tag, zoteroKeys, (done, total) => {
+        const pct = Math.round((done / total) * 100);
+        batchProgressFill.style.width = pct + '%';
+        batchProgressStatus.textContent = `${done} / ${total} 처리 중...`;
+      });
+
+      batchProgressStatus.textContent = `완료! 성공: ${result.success}, 실패: ${result.failed}`;
+
+      // Update local state if adding tag
+      if (action === 'add') {
+        papers.forEach(p => {
+          const currentTags = p.tags ? p.tags.split(', ').filter(t => t && t !== 'nan') : [];
+          if (!currentTags.includes(tag)) {
+            currentTags.push(tag);
+            p.tags = currentTags.join(', ');
+          }
+        });
+        allTags.add(tag);
+        refreshTagFilter();
+      }
+
+      showToast('일괄 처리 완료', `${result.success}개 성공, ${result.failed}개 실패`);
+
+      // Close modal after delay
+      setTimeout(() => {
+        batchTagModal.classList.remove('active');
+      }, 1500);
+
+    } catch (e) {
+      batchProgressStatus.textContent = '오류: ' + e.message;
+      alert('일괄 처리 실패: ' + e.message);
+    }
+  });
 }
