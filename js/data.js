@@ -13,6 +13,7 @@ async function loadData() {
       clusterCentroids = data.cluster_centroids || {};
       clusterLabels = data.cluster_labels || {};
       citationLinks = data.citation_links || [];
+      referenceCache = data.reference_cache || {};
       dataMeta = data.meta || {};
     } else {
       allPapers = data;

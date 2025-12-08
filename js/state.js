@@ -7,6 +7,7 @@ let currentFiltered = [];
 let clusterCentroids = {};
 let clusterLabels = {};
 let citationLinks = [];
+let referenceCache = {};
 let dataMeta = {};
 let showCitations = true;
 let highlightCluster = null;

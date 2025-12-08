@@ -227,6 +227,54 @@ def main():
     # 데이터에 추가
     data["citation_links"] = internal_links
 
+    # Top external references 캐싱 (Classics용)
+    print("\nCaching top external references...")
+    myS2Ids = set(p.get("s2_id") for p in papers if p.get("s2_id"))
+    ref_counts = {}
+    for paper in papers:
+        for ref_id in paper.get("references", []):
+            if ref_id and ref_id not in myS2Ids:
+                ref_counts[ref_id] = ref_counts.get(ref_id, 0) + 1
+
+    # Top 500 가져오기 (S2 batch API 최대 500개)
+    top_refs = sorted(ref_counts.items(), key=lambda x: -x[1])[:500]
+    top_ref_ids = [r[0] for r in top_refs]
+
+    if top_ref_ids:
+        print(f"Fetching details for top {len(top_ref_ids)} external references...")
+        ref_cache = {}
+        for attempt in range(3):
+            try:
+                resp = requests.post(
+                    f"{BASE_URL}/paper/batch",
+                    json={"ids": top_ref_ids},
+                    params={"fields": "title,citationCount"},
+                    timeout=60
+                )
+                if resp.status_code == 200:
+                    for p in resp.json():
+                        if p and p.get("paperId"):
+                            ref_cache[p["paperId"]] = {
+                                "title": p.get("title", ""),
+                                "citations": p.get("citationCount", 0)
+                            }
+                    print(f"Cached {len(ref_cache)} reference details")
+                    break
+                elif resp.status_code == 429:
+                    wait = 30 * (attempt + 1)
+                    print(f"  Rate limited on batch, waiting {wait}s... (attempt {attempt+1}/3)")
+                    time.sleep(wait)
+                else:
+                    print(f"Failed to fetch reference details: {resp.status_code}")
+                    break
+            except Exception as e:
+                print(f"Error fetching reference details: {e}")
+                if attempt < 2:
+                    time.sleep(10)
+
+        if ref_cache:
+            data["reference_cache"] = ref_cache
+
     # 저장
     output_path = Path("papers.json")
     with open(output_path, "w", encoding="utf-8") as f:

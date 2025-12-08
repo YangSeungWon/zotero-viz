@@ -510,19 +510,28 @@ function initUIHandlers() {
     html += `<p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Foundational papers frequently cited by ${scope.toLowerCase()}</p>`;
 
     if (sorted.length > 0) {
+      // Use cached reference data
+      const refCache = typeof referenceCache !== 'undefined' ? referenceCache : {};
+
       html += sorted.map(([key, count], i) => {
         const type = key.substring(0, key.indexOf(':'));
         const id = key.substring(key.indexOf(':') + 1);
         const url = type === 's2' ? `https://www.semanticscholar.org/paper/${id}` : `https://doi.org/${id}`;
-        const label = type === 's2' ? 'Semantic Scholar →' : id.substring(0, 40) + (id.length > 40 ? '...' : '');
-        return `<div class="missing-item"><div class="missing-rank">${i + 1}</div><div class="missing-info"><span class="missing-count">Cited by ${count} papers</span><br><a class="missing-link" href="${url}" target="_blank">${label}</a></div></div>`;
+        const details = refCache[id];
+        const title = details?.title || (type === 's2' ? 'Semantic Scholar →' : id.substring(0, 40) + (id.length > 40 ? '...' : ''));
+        const totalCites = details?.citations;
+        const citeInfo = totalCites !== undefined
+          ? `<span class="missing-count">Cited by ${count} papers</span> <span style="color: var(--text-muted); font-size: 10px;">(${totalCites.toLocaleString()} total)</span>`
+          : `<span class="missing-count">Cited by ${count} papers</span>`;
+        return `<div class="missing-item"><div class="missing-rank">${i + 1}</div><div class="missing-info">${citeInfo}<br><a class="missing-link" href="${url}" target="_blank" title="${title}">${title.length > 60 ? title.substring(0, 60) + '...' : title}</a></div></div>`;
       }).join('');
+      missingList.innerHTML = html;
+      missingModal.classList.add('active');
     } else {
       html += '<p style="color: var(--text-muted);">No classics found</p>';
+      missingList.innerHTML = html;
+      missingModal.classList.add('active');
     }
-
-    missingList.innerHTML = html;
-    missingModal.classList.add('active');
   });
 
   // New Work
