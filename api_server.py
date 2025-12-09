@@ -622,6 +622,88 @@ def get_sync_status():
 
 
 # ============================================================
+# Semantic Search
+# ============================================================
+
+# Lazy-loaded model for semantic search
+_semantic_model = None
+
+def get_semantic_model():
+    """Lazy load sentence transformer model"""
+    global _semantic_model
+    if _semantic_model is None:
+        from sentence_transformers import SentenceTransformer
+        _semantic_model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
+    return _semantic_model
+
+
+@app.route('/api/semantic-search', methods=['GET'])
+def semantic_search():
+    """Search papers using semantic similarity
+
+    Query params:
+        q: search query (required)
+        top_k: number of results (default 20)
+    """
+    import numpy as np
+
+    query = request.args.get('q', '').strip()
+    if not query:
+        return jsonify({"error": "Query parameter 'q' is required"}), 400
+
+    top_k = int(request.args.get('top_k', 20))
+
+    try:
+        # Load papers with embeddings
+        papers_path = Path(__file__).parent / "papers.json"
+        with open(papers_path, 'r', encoding='utf-8') as f:
+            papers_data = json.load(f)
+
+        papers = papers_data.get('papers', [])
+
+        # Filter papers with embeddings
+        papers_with_emb = [(i, p) for i, p in enumerate(papers) if p.get('embedding')]
+        if not papers_with_emb:
+            return jsonify({"error": "No embeddings found. Run build_map.py first."}), 500
+
+        # Get embeddings matrix
+        embeddings = np.array([p['embedding'] for _, p in papers_with_emb])
+
+        # Encode query
+        model = get_semantic_model()
+        query_emb = model.encode([query])[0]
+
+        # Cosine similarity
+        query_norm = query_emb / np.linalg.norm(query_emb)
+        emb_norms = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True)
+        similarities = np.dot(emb_norms, query_norm)
+
+        # Get top K
+        top_indices = np.argsort(similarities)[::-1][:top_k]
+
+        results = []
+        for idx in top_indices:
+            orig_idx, paper = papers_with_emb[idx]
+            results.append({
+                "id": paper["id"],
+                "title": paper.get("title", ""),
+                "authors": paper.get("authors", ""),
+                "year": paper.get("year"),
+                "cluster": paper.get("cluster"),
+                "cluster_label": paper.get("cluster_label", ""),
+                "similarity": float(similarities[idx])
+            })
+
+        return jsonify({
+            "query": query,
+            "results": results
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ============================================================
 # Helper Functions
 # ============================================================
 

@@ -133,6 +133,41 @@ function filterPapers() {
   const tagFilter = document.getElementById('tagFilter').value;
   const searchFilter = document.getElementById('searchFilter').value.toLowerCase().trim();
 
+  // Semantic search mode: use pre-fetched results
+  if (semanticSearchMode && semanticSearchResults && searchFilter) {
+    // Get papers that match semantic search (sorted by similarity)
+    const matchingIds = new Set(semanticSearchResults.keys());
+
+    let filtered = allPapers.filter(p => {
+      if (!p.has_notes) return false;
+      if (!matchingIds.has(p.id)) return false;
+      if (p.venue_quality < minVenue) return false;
+      if (papersOnly && !p.is_paper) return false;
+      if (bookmarkedOnly && !bookmarkedPapers.has(p.id)) return false;
+      if (tagFilter) {
+        const paperTags = (p.tags || '').split(/[;,]/).map(t => t.trim().toLowerCase());
+        if (!paperTags.includes(tagFilter.toLowerCase())) return false;
+      }
+      if (yearRange) {
+        if (p.year && (p.year < yearRange.min || p.year > yearRange.max)) return false;
+      }
+      if (filterMode === 'filter' && highlightCluster !== null) {
+        if (p.cluster !== highlightCluster) return false;
+      }
+      return true;
+    });
+
+    // Sort by similarity score
+    filtered.sort((a, b) => {
+      const simA = semanticSearchResults.get(a.id) || 0;
+      const simB = semanticSearchResults.get(b.id) || 0;
+      return simB - simA;
+    });
+
+    return filtered;
+  }
+
+  // Normal text search
   return allPapers.filter(p => {
     // Default: only show papers with notes
     if (!p.has_notes) return false;
@@ -192,15 +227,18 @@ function updateFilterChips() {
     container.appendChild(chip);
   }
 
-  // Search chip
+  // Search chip (show semantic search indicator if active)
   const searchFilter = document.getElementById('searchFilter').value.trim();
   if (searchFilter) {
     const displayText = searchFilter.length > 15 ? searchFilter.substring(0, 15) + '...' : searchFilter;
     const chip = document.createElement('span');
     chip.className = 'filter-chip search';
-    chip.innerHTML = `🔍 "${displayText}" <span class="chip-close">✕</span>`;
+    const icon = semanticSearchMode ? '🧠' : '🔍';
+    const label = semanticSearchMode ? 'AI' : '';
+    chip.innerHTML = `${icon} ${label}"${displayText}" <span class="chip-close">✕</span>`;
     chip.onclick = () => {
       document.getElementById('searchFilter').value = '';
+      semanticSearchResults = null;
       applyFilters();
     };
     container.appendChild(chip);

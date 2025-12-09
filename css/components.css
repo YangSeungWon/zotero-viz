@@ -78,6 +78,34 @@ button:hover {
   height: 16px;
 }
 
+/* Semantic search toggle */
+.semantic-toggle {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s ease;
+}
+
+.semantic-toggle:hover {
+  background: var(--border-color);
+  color: var(--text-secondary);
+}
+
+.semantic-toggle.active {
+  background: #8b5cf6;
+  border-color: #8b5cf6;
+  color: white;
+}
+
+.semantic-toggle.loading {
+  opacity: 0.6;
+  cursor: wait;
+}
+
 .close-btn {
   position: absolute;
   top: 12px;

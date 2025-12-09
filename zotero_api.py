@@ -94,19 +94,38 @@ def fetch_all_items(zot: zotero.Zotero, include_notes: bool = True, on_progress=
     print(f"Fetched {len(items)} items")
 
     if include_notes:
-        # Fetch notes for each item
-        print("Fetching notes...")
+        # Fetch ALL notes at once (much faster than N+1 children calls)
+        print("Fetching all notes...")
         if on_progress:
-            on_progress(0, len(items), "Fetching notes (0/{})...".format(len(items)))
+            on_progress(0, 1, "Fetching all notes...")
 
-        for i, item in enumerate(items):
-            item_key = item['key']
-            children = zot.children(item_key)
-            notes = [c for c in children if c['data'].get('itemType') == 'note']
-            item['_notes'] = notes
+        all_notes = []
+        note_start = 0
+        while True:
+            batch = zot.items(itemType='note', limit=100, start=note_start)
+            if not batch:
+                break
+            all_notes.extend(batch)
+            note_start += len(batch)
+            print(f"  Fetched {len(all_notes)} notes...")
 
-            if on_progress and (i + 1) % 20 == 0:
-                on_progress(i + 1, len(items), f"Fetching notes ({i + 1}/{len(items)})...")
+        print(f"Fetched {len(all_notes)} notes total")
+
+        # Build parent -> notes mapping
+        notes_by_parent = {}
+        for note in all_notes:
+            parent_key = note['data'].get('parentItem')
+            if parent_key:
+                if parent_key not in notes_by_parent:
+                    notes_by_parent[parent_key] = []
+                notes_by_parent[parent_key].append(note)
+
+        # Assign notes to items
+        for item in items:
+            item['_notes'] = notes_by_parent.get(item['key'], [])
+
+        if on_progress:
+            on_progress(1, 1, f"Matched notes to {len([i for i in items if i['_notes']])} items")
 
     return items
 

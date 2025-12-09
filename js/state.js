@@ -21,3 +21,5 @@ let zoomScale = 1;
 let bookmarkedPapers = new Set();
 let currentView = 'map'; // 'map' or 'timeline'
 let yearRange = null; // { min, max } for mini timeline filter
+let semanticSearchMode = false; // When true, use semantic search API
+let semanticSearchResults = null; // Cached semantic search results

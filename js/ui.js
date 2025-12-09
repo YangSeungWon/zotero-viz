@@ -425,16 +425,91 @@ function applyTheme(theme) {
   }
 }
 
+// Semantic search function
+async function performSemanticSearch(query) {
+  const toggle = document.getElementById('semanticToggle');
+  toggle.classList.add('loading');
+
+  try {
+    const resp = await fetch(`/api/semantic-search?q=${encodeURIComponent(query)}&top_k=50`);
+    const data = await resp.json();
+
+    if (data.error) {
+      console.error('Semantic search error:', data.error);
+      showToast('Search Error', data.error);
+      return null;
+    }
+
+    return data.results;
+  } catch (e) {
+    console.error('Semantic search failed:', e);
+    showToast('Search Error', e.message);
+    return null;
+  } finally {
+    toggle.classList.remove('loading');
+  }
+}
+
 // Initialize UI event handlers
 function initUIHandlers() {
   const debouncedApplyFilters = debounce(applyFilters, 200);
+
+  // Semantic search handler (debounced separately for API calls)
+  const debouncedSemanticSearch = debounce(async () => {
+    const query = document.getElementById('searchFilter').value.trim();
+    if (!semanticSearchMode || !query) {
+      semanticSearchResults = null;
+      applyFilters();
+      return;
+    }
+
+    const results = await performSemanticSearch(query);
+    if (results) {
+      semanticSearchResults = new Map(results.map(r => [r.id, r.similarity]));
+      applyFilters();
+    }
+  }, 500);
 
   // Filter handlers
   document.getElementById('minVenue').addEventListener('change', applyFilters);
   document.getElementById('papersOnly').addEventListener('change', applyFilters);
   document.getElementById('bookmarkedOnly').addEventListener('change', applyFilters);
   document.getElementById('tagFilter').addEventListener('change', applyFilters);
-  document.getElementById('searchFilter').addEventListener('input', debouncedApplyFilters);
+  document.getElementById('searchFilter').addEventListener('input', () => {
+    if (semanticSearchMode) {
+      showFilterStatus('updating');
+      debouncedSemanticSearch();
+    } else {
+      debouncedApplyFilters();
+    }
+  });
+
+  // Semantic search toggle
+  const semanticToggle = document.getElementById('semanticToggle');
+  semanticToggle.addEventListener('click', () => {
+    semanticSearchMode = !semanticSearchMode;
+    semanticToggle.classList.toggle('active', semanticSearchMode);
+    semanticToggle.title = semanticSearchMode
+      ? 'Semantic search ON (AI-powered)'
+      : 'Toggle semantic search (AI-powered)';
+
+    // Update placeholder
+    const searchInput = document.getElementById('searchFilter');
+    searchInput.placeholder = semanticSearchMode
+      ? 'Describe what you\'re looking for...'
+      : 'Title/Author/Abstract';
+
+    // Trigger search if there's existing text
+    const query = searchInput.value.trim();
+    if (query) {
+      if (semanticSearchMode) {
+        debouncedSemanticSearch();
+      } else {
+        semanticSearchResults = null;
+        applyFilters();
+      }
+    }
+  });
 
   // View toggle handlers
   document.querySelectorAll('.view-btn').forEach(btn => {
@@ -458,10 +533,15 @@ function initUIHandlers() {
     document.getElementById('bookmarkedOnly').checked = false;
     document.getElementById('tagFilter').value = '';
     document.getElementById('searchFilter').value = '';
+    document.getElementById('searchFilter').placeholder = 'Title/Author/Abstract';
     document.getElementById('showCitations').checked = true;
     showCitations = true;
     highlightCluster = null;
     filterMode = 'highlight';
+    // Reset semantic search
+    semanticSearchMode = false;
+    semanticSearchResults = null;
+    document.getElementById('semanticToggle').classList.remove('active');
     document.querySelectorAll('.mode-option').forEach(o => o.classList.remove('active'));
     document.querySelector('.mode-option[data-mode="highlight"]').classList.add('active');
     document.querySelectorAll('.cluster-item').forEach(el => el.classList.remove('active'));
@@ -481,6 +561,7 @@ function initUIHandlers() {
       renderMiniTimeline(allPapers);
     }
     updateStats(currentFiltered);
+    updateFilterChips();
   });
 
   // Citations toggle

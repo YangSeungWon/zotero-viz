@@ -569,6 +569,9 @@ def main():
             rec["references"] = cdata["references"]
             rec["citations"] = cdata["citations"]
 
+        # 임베딩 추가 (시맨틱 검색용)
+        rec["embedding"] = embeddings[idx].tolist()
+
         records.append(rec)
 
     # 데이터 소스 업데이트 시간
