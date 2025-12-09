@@ -553,6 +553,7 @@ def main():
             "cluster_label": cluster_labels.get(int(row["cluster"]), ""),
             "url": str(row.get("Url", "") or ""),
             "doi": str(row.get("DOI", "") or ""),
+            "pdf_key": str(row.get("PDF Key", "") or ""),
             "abstract": abstract[:500],  # 길이 제한
             "tags": manual_tags,
             "has_notes": bool(pd.notna(row.get("Notes")) and len(str(row.get("Notes", ""))) > 50),
@@ -605,7 +606,9 @@ def main():
             "map_built": datetime.now().strftime("%Y-%m-%d %H:%M"),
             "total_papers": sum(1 for r in records if r['is_paper']),
             "total_apps": sum(1 for r in records if not r['is_paper']),
-            "clusters": n_clusters
+            "clusters": n_clusters,
+            "zotero_library_id": os.environ.get("ZOTERO_LIBRARY_ID", ""),
+            "zotero_library_type": os.environ.get("ZOTERO_LIBRARY_TYPE", "user")
         }
     }
 

@@ -58,12 +58,13 @@ def get_zotero_client(
     return zotero.Zotero(library_id, library_type, api_key)
 
 
-def fetch_all_items(zot: zotero.Zotero, include_notes: bool = True, on_progress=None) -> list[dict]:
+def fetch_all_items(zot: zotero.Zotero, include_notes: bool = True, include_pdfs: bool = True, on_progress=None) -> list[dict]:
     """Fetch all items from library with optional progress callback
 
     Args:
         zot: Zotero client
         include_notes: Whether to fetch notes for each item
+        include_pdfs: Whether to fetch PDF attachment URLs
         on_progress: Callback function(current, total, message) for progress updates
     """
     print("Fetching items from Zotero API...")
@@ -127,6 +128,43 @@ def fetch_all_items(zot: zotero.Zotero, include_notes: bool = True, on_progress=
         if on_progress:
             on_progress(1, 1, f"Matched notes to {len([i for i in items if i['_notes']])} items")
 
+    if include_pdfs:
+        # Fetch ALL PDF attachments at once
+        print("Fetching PDF attachments...")
+        if on_progress:
+            on_progress(0, 1, "Fetching PDF attachments...")
+
+        all_attachments = []
+        att_start = 0
+        while True:
+            batch = zot.items(itemType='attachment', limit=100, start=att_start)
+            if not batch:
+                break
+            all_attachments.extend(batch)
+            att_start += len(batch)
+            print(f"  Fetched {len(all_attachments)} attachments...")
+
+        # Filter PDFs and build parent -> pdf_key mapping (for Zotero deep links)
+        pdfs_by_parent = {}
+        for att in all_attachments:
+            data = att['data']
+            if data.get('contentType') == 'application/pdf':
+                parent_key = data.get('parentItem')
+                att_key = att['key']  # Attachment key for zotero://open-pdf
+                if parent_key and att_key:
+                    # Prefer first PDF (usually the main one)
+                    if parent_key not in pdfs_by_parent:
+                        pdfs_by_parent[parent_key] = att_key
+
+        print(f"Found {len(pdfs_by_parent)} PDFs total")
+
+        # Assign PDF keys to items
+        for item in items:
+            item['_pdf_key'] = pdfs_by_parent.get(item['key'], '')
+
+        if on_progress:
+            on_progress(1, 1, f"Matched PDFs to {len([i for i in items if i['_pdf_key']])} items")
+
     return items
 
 
@@ -169,6 +207,7 @@ def item_to_row(item: dict) -> dict:
         'Url': data.get('url', ''),
         'Manual Tags': tags,
         'Notes': notes_content,
+        'PDF Key': item.get('_pdf_key', ''),
         # Store original for later sync
         '_zotero_item': item,
     }

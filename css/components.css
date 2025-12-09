@@ -106,6 +106,24 @@ button:hover {
   cursor: wait;
 }
 
+/* PDF link styling */
+.pdf-link {
+  background: #dc262633;
+  color: #ef4444 !important;
+}
+.pdf-link:hover {
+  background: #dc262655;
+}
+
+/* Zotero link styling */
+.zotero-link {
+  background: #cc254533;
+  color: #cc2545 !important;
+}
+.zotero-link:hover {
+  background: #cc254555;
+}
+
 .close-btn {
   position: absolute;
   top: 12px;

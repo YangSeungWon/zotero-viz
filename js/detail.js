@@ -3,6 +3,34 @@
    =========================================== */
 
 // ============================================================
+// Zotero Deep Link Helper
+// ============================================================
+
+function getZoteroUrl(zoteroKey) {
+  // Uses dataMeta from state.js (global)
+  const libraryType = dataMeta.zotero_library_type || 'user';
+  const libraryId = dataMeta.zotero_library_id || '';
+
+  if (libraryType === 'group' && libraryId) {
+    return `zotero://select/groups/${libraryId}/items/${zoteroKey}`;
+  } else {
+    return `zotero://select/library/items/${zoteroKey}`;
+  }
+}
+
+function getZoteroPdfUrl(pdfKey) {
+  // Opens PDF directly in Zotero
+  const libraryType = dataMeta.zotero_library_type || 'user';
+  const libraryId = dataMeta.zotero_library_id || '';
+
+  if (libraryType === 'group' && libraryId) {
+    return `zotero://open-pdf/groups/${libraryId}/items/${pdfKey}`;
+  } else {
+    return `zotero://open-pdf/library/items/${pdfKey}`;
+  }
+}
+
+// ============================================================
 // Tag Editor
 // ============================================================
 
@@ -379,8 +407,14 @@ function showDetail(item) {
   initTagEditor(item);
 
   let linksHtml = '';
+  if (item.zotero_key) {
+    linksHtml += `<a href="${getZoteroUrl(item.zotero_key)}" class="zotero-link">Zotero</a>`;
+  }
+  if (item.pdf_key) {
+    linksHtml += `<a href="${getZoteroPdfUrl(item.pdf_key)}" class="pdf-link">PDF</a>`;
+  }
   if (item.url) {
-    linksHtml += `<a href="${item.url}" target="_blank">Open URL</a>`;
+    linksHtml += `<a href="${item.url}" target="_blank">URL</a>`;
   }
   if (item.doi) {
     linksHtml += `<a href="https://doi.org/${item.doi}" target="_blank">DOI</a>`;
@@ -520,7 +554,9 @@ function showMobileDetail(item) {
   `;
 
   let linksHtml = '';
-  if (item.url) linksHtml += `<a href="${item.url}" target="_blank">Open</a>`;
+  if (item.zotero_key) linksHtml += `<a href="${getZoteroUrl(item.zotero_key)}" class="zotero-link">Zotero</a>`;
+  if (item.pdf_key) linksHtml += `<a href="${getZoteroPdfUrl(item.pdf_key)}" class="pdf-link">PDF</a>`;
+  if (item.url) linksHtml += `<a href="${item.url}" target="_blank">URL</a>`;
   if (item.doi) linksHtml += `<a href="https://doi.org/${item.doi}" target="_blank">DOI</a>`;
   document.getElementById('mobileDetailLinks').innerHTML = linksHtml;
 
