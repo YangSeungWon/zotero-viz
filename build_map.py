@@ -502,11 +502,13 @@ def main():
     # 기존 papers.json에서 citation 데이터 로드 (있으면)
     existing_citation_data = {}
     existing_citation_links = []
+    existing_reference_cache = {}
     try:
         with open(args.output, "r", encoding="utf-8") as f:
             existing = json.load(f)
             existing_papers = existing.get("papers", existing)
             existing_citation_links = existing.get("citation_links", [])
+            existing_reference_cache = existing.get("reference_cache", {})
             for p in existing_papers:
                 if p.get("doi"):
                     existing_citation_data[p["doi"]] = {
@@ -516,6 +518,8 @@ def main():
                         "citations": p.get("citations", []),
                     }
         print(f"  Loaded citation data for {len(existing_citation_data)} papers")
+        if existing_reference_cache:
+            print(f"  Loaded reference_cache with {len(existing_reference_cache)} entries")
     except:
         pass
 
@@ -600,6 +604,7 @@ def main():
         "cluster_centroids": cluster_centroids,
         "cluster_labels": cluster_labels,
         "citation_links": citation_links,  # S2 ID 기반 재생성
+        "reference_cache": existing_reference_cache,  # S2 외부 참조 캐시 보존
         "meta": {
             "source": args.source,
             "data_updated": data_updated,
