@@ -126,6 +126,7 @@ header h1 {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 #plot, #timelinePlot {
@@ -436,6 +437,8 @@ header h1 {
   padding: 16px;
   padding-left: 20px;
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 .resize-handle {

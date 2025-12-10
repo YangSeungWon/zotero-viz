@@ -31,7 +31,6 @@
       <button class="view-btn active" data-view="map">Map</button>
       <button class="view-btn" data-view="list">List</button>
       <button class="view-btn" data-view="timeline">Timeline</button>
-      <button class="view-btn" data-view="ideas">Ideas</button>
     </div>
     <button class="hamburger-btn" id="hamburgerBtn" aria-label="Menu">
       <span></span>
@@ -266,32 +265,35 @@
     </div>
     <div class="detail-panel" id="detailPanel">
       <div class="resize-handle" id="resizeHandle"></div>
-      <button class="close-btn" id="closeDetail" title="Close">✕</button>
-      <h2 id="detailTitle">-</h2>
-      <div class="meta" id="detailMeta"></div>
-      <div class="links" id="detailLinks"></div>
-      <div class="abstract" id="detailAbstract"></div>
-      <div id="detailNotes"></div>
-      <div class="citation-section" id="referencesSection"></div>
-      <div class="citation-section" id="citedBySection"></div>
-      <div class="similar-papers" id="similarPapers"></div>
-    </div>
 
-    <!-- Ideas Panel (replaces detail panel in Ideas view) -->
-    <div class="ideas-panel" id="ideasPanel" style="display: none;">
-      <div class="ideas-panel-header">
-        <h3>Ideas</h3>
-        <button class="btn-new-idea" id="newIdeaBtn">+ New Idea</button>
-      </div>
-      <div class="ideas-panel-content">
-        <div class="ideas-list-section">
-          <div id="ideasContainer"></div>
-        </div>
-        <div class="ideas-detail-section" id="ideaDetail">
-          <div class="idea-detail-empty">
-            Select an idea or create a new one
+      <!-- Ideas Section (collapsible, top) -->
+      <div class="ideas-section" id="ideasSection">
+        <div class="ideas-section-header" id="ideasSectionHeader">
+          <span class="ideas-section-title">Ideas</span>
+          <div class="ideas-section-actions">
+            <button class="btn-new-idea-sm" id="newIdeaBtn" title="New idea">+</button>
+            <button class="ideas-collapse-btn" id="toggleIdeasSection">▼</button>
           </div>
         </div>
+        <div class="ideas-section-content" id="ideasSectionContent">
+          <div class="ideas-list-compact" id="ideasContainer"></div>
+          <div class="idea-detail-compact" id="ideaDetail">
+            <div class="idea-detail-empty">Select or create an idea</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Paper Detail Section (bottom) -->
+      <div class="paper-detail-section" id="paperDetailSection">
+        <button class="close-btn" id="closeDetail" title="Close">✕</button>
+        <h2 id="detailTitle">-</h2>
+        <div class="meta" id="detailMeta"></div>
+        <div class="links" id="detailLinks"></div>
+        <div class="abstract" id="detailAbstract"></div>
+        <div id="detailNotes"></div>
+        <div class="citation-section" id="referencesSection"></div>
+        <div class="citation-section" id="citedBySection"></div>
+        <div class="similar-papers" id="similarPapers"></div>
       </div>
     </div>
   </div>

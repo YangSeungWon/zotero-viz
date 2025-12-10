@@ -20,7 +20,7 @@ const IDEA_STATUSES = {
 
 async function fetchIdeas() {
   try {
-    const response = await fetch(`${API_BASE}/api/ideas`);
+    const response = await fetch(`${API_BASE}/ideas`);
     const data = await response.json();
     if (data.success) {
       allIdeas = data.ideas || [];
@@ -37,11 +37,11 @@ async function fetchIdeas() {
 
 async function createIdea(ideaData) {
   try {
-    const response = await fetch(`${API_BASE}/api/ideas`, {
+    const response = await fetch(`${API_BASE}/ideas`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': API_KEY
+        'X-API-Key': getApiKey()
       },
       body: JSON.stringify(ideaData)
     });
@@ -61,11 +61,11 @@ async function createIdea(ideaData) {
 
 async function updateIdea(zoteroKey, ideaData) {
   try {
-    const response = await fetch(`${API_BASE}/api/ideas/${zoteroKey}`, {
+    const response = await fetch(`${API_BASE}/ideas/${zoteroKey}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': API_KEY
+        'X-API-Key': getApiKey()
       },
       body: JSON.stringify(ideaData)
     });
@@ -89,10 +89,10 @@ async function updateIdea(zoteroKey, ideaData) {
 
 async function deleteIdea(zoteroKey) {
   try {
-    const response = await fetch(`${API_BASE}/api/ideas/${zoteroKey}`, {
+    const response = await fetch(`${API_BASE}/ideas/${zoteroKey}`, {
       method: 'DELETE',
       headers: {
-        'X-API-Key': API_KEY
+        'X-API-Key': getApiKey()
       }
     });
     const data = await response.json();
@@ -111,11 +111,11 @@ async function deleteIdea(zoteroKey) {
 
 async function addPaperToIdea(ideaKey, paperKey) {
   try {
-    const response = await fetch(`${API_BASE}/api/ideas/${ideaKey}/papers`, {
+    const response = await fetch(`${API_BASE}/ideas/${ideaKey}/papers`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': API_KEY
+        'X-API-Key': getApiKey()
       },
       body: JSON.stringify({ paper_key: paperKey })
     });
@@ -139,10 +139,10 @@ async function addPaperToIdea(ideaKey, paperKey) {
 
 async function removePaperFromIdea(ideaKey, paperKey) {
   try {
-    const response = await fetch(`${API_BASE}/api/ideas/${ideaKey}/papers/${paperKey}`, {
+    const response = await fetch(`${API_BASE}/ideas/${ideaKey}/papers/${paperKey}`, {
       method: 'DELETE',
       headers: {
-        'X-API-Key': API_KEY
+        'X-API-Key': getApiKey()
       }
     });
     const data = await response.json();
@@ -170,6 +170,12 @@ async function removePaperFromIdea(ideaKey, paperKey) {
 function renderIdeasPanel() {
   const container = document.getElementById('ideasContainer');
   if (!container) return;
+
+  // Update section title with count
+  const titleEl = document.querySelector('.ideas-section-title');
+  if (titleEl) {
+    titleEl.textContent = `Ideas${allIdeas.length > 0 ? ` (${allIdeas.length})` : ''}`;
+  }
 
   if (allIdeas.length === 0) {
     container.innerHTML = `
@@ -481,17 +487,32 @@ async function submitNewIdea() {
   const title = document.getElementById('newIdeaTitle').value.trim();
   const description = document.getElementById('newIdeaDescription').value.trim();
   const status = document.getElementById('newIdeaStatus').value;
+  const submitBtn = document.getElementById('submitNewIdea');
 
   if (!title) {
     alert('Title is required');
     return;
   }
 
-  const idea = await createIdea({ title, description, status });
-  if (idea) {
-    hideNewIdeaDialog();
-    renderIdeasPanel();
-    selectIdea(idea);
+  // Disable button while submitting
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Creating...';
+  }
+
+  try {
+    const idea = await createIdea({ title, description, status });
+    if (idea) {
+      hideNewIdeaDialog();
+      renderIdeasPanel();
+      selectIdea(idea);
+    }
+  } finally {
+    // Re-enable button
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Create';
+    }
   }
 }
 
@@ -503,7 +524,30 @@ function initIdeasPanel() {
   // New idea button
   const newBtn = document.getElementById('newIdeaBtn');
   if (newBtn) {
-    newBtn.addEventListener('click', showNewIdeaDialog);
+    newBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showNewIdeaDialog();
+    });
+  }
+
+  // Toggle collapse
+  const toggleBtn = document.getElementById('toggleIdeasSection');
+  const ideasSection = document.getElementById('ideasSection');
+  const header = document.getElementById('ideasSectionHeader');
+
+  if (toggleBtn && ideasSection) {
+    toggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      ideasSection.classList.toggle('collapsed');
+    });
+  }
+
+  if (header && ideasSection) {
+    header.addEventListener('click', (e) => {
+      if (e.target === header || e.target.classList.contains('ideas-section-title')) {
+        ideasSection.classList.toggle('collapsed');
+      }
+    });
   }
 
   // Modal handlers

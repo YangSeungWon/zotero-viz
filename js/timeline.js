@@ -332,7 +332,7 @@ function initMiniTimelineBrush() {
   });
 }
 
-// Switch between map, timeline, list, and ideas view
+// Switch between map, timeline, and list view
 function switchView(view) {
   currentView = view;
 
@@ -340,7 +340,6 @@ function switchView(view) {
   const timelinePlot = document.getElementById('timelinePlot');
   const listView = document.getElementById('listView');
   const detailPanel = document.getElementById('detailPanel');
-  const ideasPanel = document.getElementById('ideasPanel');
   const leftSidebar = document.getElementById('leftSidebar');
   const miniTimeline = document.getElementById('miniTimeline');
 
@@ -348,7 +347,6 @@ function switchView(view) {
   mapPlot.style.display = 'none';
   timelinePlot.style.display = 'none';
   if (listView) listView.style.display = 'none';
-  if (ideasPanel) ideasPanel.style.display = 'none';
 
   if (view === 'map') {
     mapPlot.style.display = 'block';
@@ -360,7 +358,7 @@ function switchView(view) {
     if (listView) listView.style.display = 'flex';
     if (detailPanel) detailPanel.style.display = '';
     if (leftSidebar) leftSidebar.style.display = '';
-    if (miniTimeline) miniTimeline.style.display = '';
+    if (miniTimeline) miniTimeline.style.display = 'none';
     renderListView(currentFiltered);
   } else if (view === 'timeline') {
     timelinePlot.style.display = 'block';
@@ -368,18 +366,6 @@ function switchView(view) {
     if (leftSidebar) leftSidebar.style.display = '';
     if (miniTimeline) miniTimeline.style.display = 'none';
     renderTimeline(currentFiltered);
-  } else if (view === 'ideas') {
-    mapPlot.style.display = 'block';  // Keep map visible for linking
-    if (detailPanel) detailPanel.style.display = 'none';
-    if (ideasPanel) ideasPanel.style.display = 'flex';
-    if (leftSidebar) leftSidebar.style.display = '';
-    if (miniTimeline) miniTimeline.style.display = '';
-    // Initialize ideas panel if needed
-    if (typeof initIdeasPanel === 'function' && !ideasPanel.dataset.initialized) {
-      initIdeasPanel();
-      ideasPanel.dataset.initialized = 'true';
-    }
-    render(currentFiltered);
   }
 
   // Update button states

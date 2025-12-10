@@ -21,6 +21,16 @@ function initApp() {
   // Initialize sync panel
   initSyncPanel();
 
+  // Initialize ideas section (collapsed by default, expand on Ideas view)
+  const ideasSection = document.getElementById('ideasSection');
+  if (ideasSection) {
+    ideasSection.classList.add('collapsed');
+  }
+  if (typeof initIdeasPanel === 'function') {
+    initIdeasPanel();
+    if (ideasSection) ideasSection.dataset.initialized = 'true';
+  }
+
   // Initialize mobile handlers
   initMobileHandlers();
 
