@@ -397,6 +397,212 @@ def sync_cluster_tags(
     return results
 
 
+# =====================================================
+# Ideas API - Brainstorming notes stored in Zotero
+# =====================================================
+
+IDEAS_COLLECTION_NAME = "Ideas"
+
+
+def get_or_create_ideas_collection(zot: zotero.Zotero) -> str:
+    """Get or create the Ideas collection, returns collection key"""
+    collections = zot.collections()
+
+    for c in collections:
+        if c['data']['name'] == IDEAS_COLLECTION_NAME:
+            return c['key']
+
+    # Create new collection
+    new_collection = zot.create_collections([{'name': IDEAS_COLLECTION_NAME}])
+    if new_collection and 'success' in new_collection:
+        # new_collection['success'] is a dict like {'0': 'KEY123'}
+        return list(new_collection['success'].values())[0]
+
+    raise Exception(f"Failed to create {IDEAS_COLLECTION_NAME} collection")
+
+
+def fetch_ideas(zot: zotero.Zotero) -> list[dict]:
+    """Fetch all ideas (standalone notes) from Ideas collection"""
+    try:
+        collection_key = get_or_create_ideas_collection(zot)
+    except Exception as e:
+        print(f"Error getting Ideas collection: {e}")
+        return []
+
+    # Fetch items in collection
+    items = zot.collection_items(collection_key, itemType='note')
+
+    # Parse each idea
+    ideas = []
+    for item in items:
+        idea = parse_idea_from_note(item)
+        if idea:
+            ideas.append(idea)
+
+    return ideas
+
+
+def parse_idea_from_note(item: dict) -> dict | None:
+    """Parse structured idea from Zotero note HTML"""
+    import re
+    from html.parser import HTMLParser
+
+    note_html = item['data'].get('note', '')
+    if not note_html:
+        return None
+
+    # Extract data attributes from root div
+    idea = {
+        'zotero_key': item['key'],
+        'version': item['version'],
+    }
+
+    # Parse data-* attributes from <div class="idea" ...>
+    idea_match = re.search(
+        r'<div[^>]*class="idea"[^>]*'
+        r'data-id="([^"]*)"[^>]*'
+        r'data-status="([^"]*)"[^>]*'
+        r'data-created="([^"]*)"[^>]*'
+        r'data-updated="([^"]*)"',
+        note_html, re.IGNORECASE
+    )
+
+    if idea_match:
+        idea['id'] = idea_match.group(1)
+        idea['status'] = idea_match.group(2)
+        idea['created'] = idea_match.group(3)
+        idea['updated'] = idea_match.group(4)
+    else:
+        # Fallback: generate ID, use defaults
+        idea['id'] = f"idea-{item['key']}"
+        idea['status'] = 'drafting'
+        idea['created'] = item['data'].get('dateAdded', '')[:10]
+        idea['updated'] = item['data'].get('dateModified', '')[:10]
+
+    # Extract title from <h1>
+    title_match = re.search(r'<h1[^>]*>(.*?)</h1>', note_html, re.IGNORECASE | re.DOTALL)
+    idea['title'] = title_match.group(1).strip() if title_match else 'Untitled Idea'
+
+    # Extract description from <div class="description">
+    desc_match = re.search(
+        r'<div[^>]*class="description"[^>]*>(.*?)</div>',
+        note_html, re.IGNORECASE | re.DOTALL
+    )
+    idea['description'] = desc_match.group(1).strip() if desc_match else ''
+
+    # Extract connected papers from data-keys attribute
+    papers_match = re.search(
+        r'<div[^>]*class="connected-papers"[^>]*data-keys="([^"]*)"',
+        note_html, re.IGNORECASE
+    )
+    if papers_match and papers_match.group(1):
+        idea['connected_papers'] = [k.strip() for k in papers_match.group(1).split(',') if k.strip()]
+    else:
+        idea['connected_papers'] = []
+
+    return idea
+
+
+def create_idea_html(idea: dict) -> str:
+    """Create structured HTML from idea dict"""
+    from datetime import datetime
+
+    idea_id = idea.get('id', f"idea-{datetime.now().strftime('%Y%m%d%H%M%S')}")
+    status = idea.get('status', 'drafting')
+    created = idea.get('created', datetime.now().strftime('%Y-%m-%d'))
+    updated = idea.get('updated', datetime.now().strftime('%Y-%m-%d'))
+    title = idea.get('title', 'Untitled Idea')
+    description = idea.get('description', '')
+    connected_papers = idea.get('connected_papers', [])
+
+    papers_keys = ','.join(connected_papers) if connected_papers else ''
+
+    html = f'''<div class="idea" data-id="{idea_id}" data-status="{status}" data-created="{created}" data-updated="{updated}">
+  <h1>{title}</h1>
+  <div class="description">
+    {description}
+  </div>
+  <div class="connected-papers" data-keys="{papers_keys}">
+  </div>
+</div>'''
+
+    return html
+
+
+def create_idea(zot: zotero.Zotero, idea: dict) -> dict | None:
+    """Create a new idea as standalone note in Ideas collection"""
+    from datetime import datetime
+
+    collection_key = get_or_create_ideas_collection(zot)
+
+    # Ensure required fields
+    if 'id' not in idea:
+        idea['id'] = f"idea-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    if 'created' not in idea:
+        idea['created'] = datetime.now().strftime('%Y-%m-%d')
+    if 'updated' not in idea:
+        idea['updated'] = datetime.now().strftime('%Y-%m-%d')
+    if 'status' not in idea:
+        idea['status'] = 'drafting'
+
+    note_html = create_idea_html(idea)
+
+    # Create standalone note
+    note_data = {
+        'itemType': 'note',
+        'note': note_html,
+        'collections': [collection_key],
+        'tags': [{'tag': 'idea'}]
+    }
+
+    try:
+        result = zot.create_items([note_data])
+        if result and 'success' in result:
+            new_key = list(result['success'].values())[0]
+            idea['zotero_key'] = new_key
+            return idea
+    except Exception as e:
+        print(f"Error creating idea: {e}")
+
+    return None
+
+
+def update_idea(zot: zotero.Zotero, idea: dict) -> bool:
+    """Update an existing idea"""
+    from datetime import datetime
+
+    if 'zotero_key' not in idea:
+        print("Error: idea must have zotero_key")
+        return False
+
+    try:
+        item = zot.item(idea['zotero_key'])
+
+        # Update timestamp
+        idea['updated'] = datetime.now().strftime('%Y-%m-%d')
+
+        # Generate new HTML
+        note_html = create_idea_html(idea)
+        item['data']['note'] = note_html
+
+        zot.update_item(item)
+        return True
+    except Exception as e:
+        print(f"Error updating idea: {e}")
+        return False
+
+
+def delete_idea(zot: zotero.Zotero, zotero_key: str) -> bool:
+    """Delete an idea"""
+    try:
+        item = zot.item(zotero_key)
+        zot.delete_item(item)
+        return True
+    except Exception as e:
+        print(f"Error deleting idea: {e}")
+        return False
+
+
 # CLI for testing
 if __name__ == "__main__":
     import argparse
@@ -405,6 +611,8 @@ if __name__ == "__main__":
     parser.add_argument("--test", action="store_true", help="Test connection")
     parser.add_argument("--fetch", action="store_true", help="Fetch and print items")
     parser.add_argument("--count", action="store_true", help="Count items")
+    parser.add_argument("--ideas", action="store_true", help="List ideas")
+    parser.add_argument("--create-idea", type=str, help="Create test idea with title")
     args = parser.parse_args()
 
     try:
@@ -427,6 +635,24 @@ if __name__ == "__main__":
             for item in items[:5]:
                 print(f"- {item['data'].get('title', 'No title')}")
             print(f"... and {len(items) - 5} more")
+
+        if args.ideas:
+            ideas = fetch_ideas(zot)
+            print(f"Found {len(ideas)} ideas:")
+            for idea in ideas:
+                papers_count = len(idea.get('connected_papers', []))
+                print(f"  [{idea['status']}] {idea['title']} ({papers_count} papers)")
+
+        if args.create_idea:
+            idea = create_idea(zot, {
+                'title': args.create_idea,
+                'description': '<p>Test description</p>',
+                'status': 'drafting'
+            })
+            if idea:
+                print(f"Created idea: {idea['title']} (key: {idea['zotero_key']})")
+            else:
+                print("Failed to create idea")
 
     except ValueError as e:
         print(f"Error: {e}")

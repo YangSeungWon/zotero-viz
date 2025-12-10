@@ -376,7 +376,14 @@ function render(filteredPapers) {
     plotDiv.on('plotly_click', function(data) {
       if (data.points && data.points[0] && data.points[0].customdata) {
         pointClicked = true;
-        showDetail(data.points[0].customdata);
+        const paper = data.points[0].customdata;
+
+        // Check if in link paper mode for Ideas
+        if (typeof handlePaperClickForIdea === 'function' && typeof linkPaperMode !== 'undefined' && linkPaperMode) {
+          handlePaperClickForIdea(paper);
+        } else {
+          showDetail(paper);
+        }
       }
     });
 

@@ -36,7 +36,12 @@ from zotero_api import (
     item_to_row,
     replace_cluster_tag,
     batch_replace_cluster_tags,
-    batch_update_items
+    batch_update_items,
+    # Ideas API
+    fetch_ideas,
+    create_idea,
+    update_idea,
+    delete_idea
 )
 
 # Load .env
@@ -701,6 +706,136 @@ def semantic_search():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+# ============================================================
+# Ideas API Endpoints
+# ============================================================
+
+@app.route('/api/ideas', methods=['GET'])
+def get_ideas():
+    """Get all ideas from Zotero Ideas collection"""
+    try:
+        zot = get_zotero_client()
+        ideas = fetch_ideas(zot)
+        return jsonify({"success": True, "ideas": ideas})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/ideas', methods=['POST'])
+def create_new_idea():
+    """Create a new idea"""
+    try:
+        data = request.json
+        if not data.get('title'):
+            return jsonify({"success": False, "error": "Title is required"}), 400
+
+        zot = get_zotero_client()
+        idea = create_idea(zot, data)
+
+        if idea:
+            return jsonify({"success": True, "idea": idea})
+        else:
+            return jsonify({"success": False, "error": "Failed to create idea"}), 500
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/ideas/<zotero_key>', methods=['PUT'])
+def update_existing_idea(zotero_key):
+    """Update an existing idea"""
+    try:
+        data = request.json
+        data['zotero_key'] = zotero_key
+
+        zot = get_zotero_client()
+        success = update_idea(zot, data)
+
+        if success:
+            return jsonify({"success": True})
+        else:
+            return jsonify({"success": False, "error": "Failed to update idea"}), 500
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/ideas/<zotero_key>', methods=['DELETE'])
+def delete_existing_idea(zotero_key):
+    """Delete an idea"""
+    try:
+        zot = get_zotero_client()
+        success = delete_idea(zot, zotero_key)
+
+        if success:
+            return jsonify({"success": True})
+        else:
+            return jsonify({"success": False, "error": "Failed to delete idea"}), 500
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/ideas/<zotero_key>/papers', methods=['POST'])
+def add_paper_to_idea(zotero_key):
+    """Add a paper to an idea's connected papers"""
+    try:
+        data = request.json
+        paper_key = data.get('paper_key')
+        if not paper_key:
+            return jsonify({"success": False, "error": "paper_key is required"}), 400
+
+        zot = get_zotero_client()
+
+        # Fetch current idea
+        ideas = fetch_ideas(zot)
+        idea = next((i for i in ideas if i.get('zotero_key') == zotero_key), None)
+        if not idea:
+            return jsonify({"success": False, "error": "Idea not found"}), 404
+
+        # Add paper if not already connected
+        connected = idea.get('connected_papers', [])
+        if paper_key not in connected:
+            connected.append(paper_key)
+            idea['connected_papers'] = connected
+            success = update_idea(zot, idea)
+            if success:
+                return jsonify({"success": True, "connected_papers": connected})
+            else:
+                return jsonify({"success": False, "error": "Failed to update"}), 500
+        else:
+            return jsonify({"success": True, "connected_papers": connected, "message": "Already connected"})
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/ideas/<zotero_key>/papers/<paper_key>', methods=['DELETE'])
+def remove_paper_from_idea(zotero_key, paper_key):
+    """Remove a paper from an idea's connected papers"""
+    try:
+        zot = get_zotero_client()
+
+        # Fetch current idea
+        ideas = fetch_ideas(zot)
+        idea = next((i for i in ideas if i.get('zotero_key') == zotero_key), None)
+        if not idea:
+            return jsonify({"success": False, "error": "Idea not found"}), 404
+
+        # Remove paper
+        connected = idea.get('connected_papers', [])
+        if paper_key in connected:
+            connected.remove(paper_key)
+            idea['connected_papers'] = connected
+            success = update_idea(zot, idea)
+            if success:
+                return jsonify({"success": True, "connected_papers": connected})
+            else:
+                return jsonify({"success": False, "error": "Failed to update"}), 500
+        else:
+            return jsonify({"success": True, "connected_papers": connected, "message": "Not connected"})
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 # ============================================================

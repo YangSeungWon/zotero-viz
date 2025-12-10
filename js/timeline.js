@@ -332,21 +332,46 @@ function initMiniTimelineBrush() {
   });
 }
 
-// Switch between map and timeline view
+// Switch between map, timeline, and ideas view
 function switchView(view) {
   currentView = view;
 
   const mapPlot = document.getElementById('plot');
   const timelinePlot = document.getElementById('timelinePlot');
+  const detailPanel = document.getElementById('detailPanel');
+  const ideasPanel = document.getElementById('ideasPanel');
+  const leftSidebar = document.getElementById('leftSidebar');
+  const miniTimeline = document.getElementById('miniTimeline');
+
+  // Hide all views first
+  mapPlot.style.display = 'none';
+  timelinePlot.style.display = 'none';
+  if (ideasPanel) ideasPanel.style.display = 'none';
 
   if (view === 'map') {
     mapPlot.style.display = 'block';
-    timelinePlot.style.display = 'none';
+    if (detailPanel) detailPanel.style.display = '';
+    if (leftSidebar) leftSidebar.style.display = '';
+    if (miniTimeline) miniTimeline.style.display = '';
     render(currentFiltered);
-  } else {
-    mapPlot.style.display = 'none';
+  } else if (view === 'timeline') {
     timelinePlot.style.display = 'block';
+    if (detailPanel) detailPanel.style.display = '';
+    if (leftSidebar) leftSidebar.style.display = '';
+    if (miniTimeline) miniTimeline.style.display = 'none';
     renderTimeline(currentFiltered);
+  } else if (view === 'ideas') {
+    mapPlot.style.display = 'block';  // Keep map visible for linking
+    if (detailPanel) detailPanel.style.display = 'none';
+    if (ideasPanel) ideasPanel.style.display = 'flex';
+    if (leftSidebar) leftSidebar.style.display = '';
+    if (miniTimeline) miniTimeline.style.display = '';
+    // Initialize ideas panel if needed
+    if (typeof initIdeasPanel === 'function' && !ideasPanel.dataset.initialized) {
+      initIdeasPanel();
+      ideasPanel.dataset.initialized = 'true';
+    }
+    render(currentFiltered);
   }
 
   // Update button states

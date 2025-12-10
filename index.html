@@ -17,6 +17,7 @@
     <div class="view-toggle" id="viewToggle">
       <button class="view-btn active" data-view="map">Map</button>
       <button class="view-btn" data-view="timeline">Timeline</button>
+      <button class="view-btn" data-view="ideas">Ideas</button>
     </div>
     <button class="hamburger-btn" id="hamburgerBtn" aria-label="Menu">
       <span></span>
@@ -215,6 +216,10 @@
     <div class="plot-container">
       <div id="plot"></div>
       <div id="timelinePlot" style="display: none;"></div>
+      <!-- Link Mode Indicator -->
+      <div class="link-mode-indicator" id="linkModeIndicator" style="display: none;">
+        Click papers to link/unlink from selected idea
+      </div>
       <div class="mini-timeline" id="miniTimeline">
         <div class="mini-timeline-resize" id="miniTimelineResize"></div>
         <div class="mini-timeline-header">
@@ -238,6 +243,24 @@
       <div class="citation-section" id="referencesSection"></div>
       <div class="citation-section" id="citedBySection"></div>
       <div class="similar-papers" id="similarPapers"></div>
+    </div>
+
+    <!-- Ideas Panel (replaces detail panel in Ideas view) -->
+    <div class="ideas-panel" id="ideasPanel" style="display: none;">
+      <div class="ideas-panel-header">
+        <h3>Ideas</h3>
+        <button class="btn-new-idea" id="newIdeaBtn">+ New Idea</button>
+      </div>
+      <div class="ideas-panel-content">
+        <div class="ideas-list-section">
+          <div id="ideasContainer"></div>
+        </div>
+        <div class="ideas-detail-section" id="ideaDetail">
+          <div class="idea-detail-empty">
+            Select an idea or create a new one
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -323,6 +346,35 @@
     </div>
   </div>
 
+  <!-- New Idea Modal -->
+  <div class="modal-overlay" id="newIdeaModal" style="display: none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>New Idea</h3>
+        <button class="modal-close" id="cancelNewIdea">✕</button>
+      </div>
+      <div class="modal-content">
+        <div class="control-group" style="margin-bottom: 12px;">
+          <label>Title</label>
+          <input type="text" id="newIdeaTitle" placeholder="Your idea title..." style="width: 100%;">
+        </div>
+        <div class="control-group" style="margin-bottom: 12px;">
+          <label>Description (optional)</label>
+          <textarea id="newIdeaDescription" placeholder="Describe your idea..." rows="4" style="width: 100%;"></textarea>
+        </div>
+        <div class="control-group" style="margin-bottom: 12px;">
+          <label>Status</label>
+          <select id="newIdeaStatus" style="width: 100%;">
+            <option value="drafting">Drafting</option>
+            <option value="exploring">Exploring</option>
+            <option value="reviewing">Reviewing</option>
+          </select>
+        </div>
+        <button id="submitNewIdea" style="width: 100%;">Create Idea</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Mobile Bottom Sheet -->
   <div class="bottom-sheet" id="bottomSheet">
     <div class="bottom-sheet-handle" id="bottomSheetHandle"></div>
@@ -370,6 +422,7 @@
   <script src="js/detail.js"></script>
   <script src="js/mobile.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/ideas.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
