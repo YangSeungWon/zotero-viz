@@ -81,6 +81,19 @@ def health_check():
     return jsonify({"status": "ok"})
 
 
+@app.route('/api/auth/verify', methods=['POST'])
+def verify_auth():
+    """Verify API key"""
+    if not API_KEY:
+        return jsonify({"error": "Server API key not configured"}), 500
+
+    key = request.headers.get('X-API-Key')
+    if key == API_KEY:
+        return jsonify({"success": True, "message": "Authentication successful"})
+    else:
+        return jsonify({"success": False, "error": "Invalid API key"}), 401
+
+
 @app.route('/api/tags/paper/<zotero_key>', methods=['GET'])
 def get_paper_tags(zotero_key):
     """Get tags for a specific paper"""

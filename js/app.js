@@ -2,8 +2,13 @@
    Main Application - Initialization
    =========================================== */
 
-// Initialize application
-(function() {
+let appInitialized = false;
+
+// Initialize application (called after auth)
+function initApp() {
+  if (appInitialized) return;
+  appInitialized = true;
+
   // Restore panel width before render to avoid layout shift
   const savedWidth = localStorage.getItem('detailPanelWidth');
   if (savedWidth) {
@@ -40,4 +45,4 @@
       }
     }
   });
-})();
+}

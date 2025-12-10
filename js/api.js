@@ -4,16 +4,9 @@
 
 const API_BASE = '/api';
 
-// Get or prompt for API key
+// Get stored API key (set by auth.js after login)
 function getApiKey() {
-  let key = localStorage.getItem('app_api_key');
-  if (!key) {
-    key = prompt('API Key를 입력하세요:');
-    if (key) {
-      localStorage.setItem('app_api_key', key);
-    }
-  }
-  return key;
+  return localStorage.getItem('app_api_key');
 }
 
 // Clear stored API key
