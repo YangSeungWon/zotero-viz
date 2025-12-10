@@ -35,17 +35,64 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 # ============================================================
 
 # Venue quality 점수 (1-5)
-# 1티어 (5): CHI full, UIST, IMWUT, TOCHI, JCMC, IJHCS
-# 2티어 (4): CSCW/PACM HCI, DIS, MobileHCI
+# 1티어 (5): CHI, UIST, IMWUT/UbiComp, TOCHI, JCMC, IJHCS, CVPR
+# 2티어 (4): CSCW/PACM HCI, DIS, MobileHCI, IUI, VR/ISMAR, NordiCHI, CHI Play, C&C
 # 3티어 (3): CHI EA, TEI, 워크샵/포스터
 # 기본값: 2.5
 
-VENUE_TIER1 = ["uist", "imwut", "tochi", "trans. comput.-hum. interact",
-               "journal of computer-mediated communication", "jcmc",
-               "human-computer studies", "ijhcs"]
-VENUE_TIER2 = ["cscw", "proc. acm hum.-comput. interact", "acm hum.-comput. interact",
-               "dis", "mobilehci", "iui"]
-VENUE_TIER3 = ["extended abstract", "chi ea", "tei", "workshop", "poster"]
+VENUE_TIER1 = [
+    # CHI main conference
+    "chi conference on human factors",
+    "sigchi conference on human factors",
+    "annual acm conference on human factors",
+    # UIST
+    "user interface software and technology",
+    "uist",
+    # IMWUT / UbiComp
+    "interact. mob. wearable ubiquitous",
+    "imwut",
+    "ubiquitous computing",
+    "ubicomp",
+    # Journals
+    "trans. comput.-hum. interact",
+    "tochi",
+    "journal of computer-mediated communication",
+    "jcmc",
+    "human-computer studies",
+    "ijhcs",
+    # CV top venue
+    "cvpr",
+    "computer vision and pattern recognition",
+]
+VENUE_TIER2 = [
+    # CSCW / PACM HCI
+    "cscw",
+    "computer supported cooperative work",
+    "proc. acm hum.-comput. interact",
+    "acm hum.-comput. interact",
+    # DIS
+    "designing interactive systems",
+    # MobileHCI
+    "mobilehci",
+    "mobile devices and services",
+    "human-computer interaction with mobile",
+    # IUI
+    "intelligent user interface",
+    "iui",
+    # VR/AR
+    "virtual reality software and technology",
+    "vrst",
+    "mixed and augmented reality",
+    "ismar",
+    # Others
+    "nordic human-computer",
+    "nordichi",
+    "chi play",
+    "computer-human interaction in play",
+    "creativity and cognition",
+    "mobile and ubiquitous multimedia",
+]
+VENUE_TIER3 = ["extended abstract", "chi ea", "tei", "tangible, embedded", "workshop", "poster", "adjunct"]
 
 # Item type 점수
 TYPE_SCORE = {

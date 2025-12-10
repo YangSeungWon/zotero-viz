@@ -487,17 +487,39 @@ header h1 {
 
 .detail-panel .links {
   margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
-.detail-panel .links a {
-  color: var(--accent);
+.detail-panel .links a,
+.detail-panel .links button {
+  display: inline-block;
+  padding: 6px 12px;
   font-size: 12px;
+  font-weight: 500;
   text-decoration: none;
-  margin-right: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-.detail-panel .links a:hover {
-  text-decoration: underline;
+.detail-panel .links a:hover,
+.detail-panel .links button:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent);
+  color: var(--text-primary);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.detail-panel .links a:active,
+.detail-panel .links button:active {
+  transform: translateY(1px);
+  box-shadow: none;
 }
 
 .detail-panel .notes {
@@ -520,8 +542,6 @@ header h1 {
   background: var(--bg-tertiary);
   padding: 10px;
   border-radius: 6px;
-  max-height: 200px;
-  overflow-y: auto;
 }
 
 .detail-panel .similar-papers {

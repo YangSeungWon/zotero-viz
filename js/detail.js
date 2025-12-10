@@ -395,19 +395,20 @@ function showDetail(item) {
   render(currentFiltered);
 
   const isBookmarked = bookmarkedPapers.has(item.id);
-  document.getElementById('detailTitle').innerHTML = `
-    <span class="title-text">${item.title || 'Untitled'}</span>
-    <button class="bookmark-btn ${isBookmarked ? 'active' : ''}" title="Toggle bookmark">
-      ${isBookmarked ? '★' : '☆'}
-    </button>
-  `;
+  document.getElementById('detailTitle').textContent = item.title || 'Untitled';
 
-  // 북마크 버튼 핸들러
-  document.querySelector('.bookmark-btn').addEventListener('click', async () => {
+  // 북마크 버튼 업데이트
+  const bookmarkBtn = document.getElementById('bookmarkBtn');
+  bookmarkBtn.textContent = isBookmarked ? '★' : '☆';
+  bookmarkBtn.classList.toggle('active', isBookmarked);
+
+  // 북마크 버튼 핸들러 (기존 리스너 제거 후 추가)
+  const newBookmarkBtn = bookmarkBtn.cloneNode(true);
+  bookmarkBtn.parentNode.replaceChild(newBookmarkBtn, bookmarkBtn);
+  newBookmarkBtn.addEventListener('click', async () => {
     const nowBookmarked = await toggleBookmark(item);
-    const btn = document.querySelector('.bookmark-btn');
-    btn.textContent = nowBookmarked ? '★' : '☆';
-    btn.classList.toggle('active', nowBookmarked);
+    newBookmarkBtn.textContent = nowBookmarked ? '★' : '☆';
+    newBookmarkBtn.classList.toggle('active', nowBookmarked);
     render(currentFiltered);
   });
 
@@ -440,9 +441,9 @@ function showDetail(item) {
     ${item.authors ? `<br><span><strong>Authors:</strong> ${item.authors.substring(0, 100)}${item.authors.length > 100 ? '...' : ''}</span>` : ''}
   `;
 
-  // Tag editor
+  // Tag editor (at bottom)
   const tagEditorHtml = renderTagEditor(item);
-  document.getElementById('detailMeta').innerHTML += tagEditorHtml;
+  document.getElementById('detailTags').innerHTML = tagEditorHtml;
   initTagEditor(item);
 
   let linksHtml = '';

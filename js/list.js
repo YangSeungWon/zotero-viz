@@ -35,6 +35,16 @@ function renderListView(papers) {
     }
   }
 
+  // Build internal citation maps
+  const internalRefs = {};  // paper.id -> count of papers it references (in library)
+  const internalCited = {}; // paper.id -> count of papers that cite it (in library)
+  if (citationLinks) {
+    for (const link of citationLinks) {
+      internalRefs[link.source] = (internalRefs[link.source] || 0) + 1;
+      internalCited[link.target] = (internalCited[link.target] || 0) + 1;
+    }
+  }
+
   // Render list items
   let html = '';
   for (const paper of sorted) {
@@ -52,8 +62,9 @@ function renderListView(papers) {
       }
     }
 
-    // Venue badge
-    const venueBadge = paper.venue_quality ? `<span class="venue-badge v${paper.venue_quality}">${paper.venue_quality}</span>` : '';
+    // Internal citation stats
+    const intRefs = internalRefs[paper.id] || 0;
+    const intCited = internalCited[paper.id] || 0;
 
     html += `
       <div class="list-item ${isSelected ? 'selected' : ''}" data-paper-id="${paper.id}">
@@ -61,8 +72,7 @@ function renderListView(papers) {
           <div class="list-item-header">
             ${simScore}
             <span class="list-item-year">${paper.year || '?'}</span>
-            ${venueBadge}
-            <span class="list-item-cluster" style="background: ${clusterColor}20; color: ${clusterColor}; border: 1px solid ${clusterColor}">${clusterLabel}</span>
+            <span class="list-item-cluster" style="background: ${clusterColor}; color: black;">${clusterLabel}</span>
             ${isBookmarked ? '<span class="list-item-bookmark">★</span>' : ''}
           </div>
           <div class="list-item-title">${escapeHtml(paper.title)}</div>
@@ -70,7 +80,9 @@ function renderListView(papers) {
           <div class="list-item-venue">${escapeHtml(paper.venue || '')}</div>
         </div>
         <div class="list-item-meta">
-          ${paper.citation_count ? `<span class="list-item-citations" title="Citations">${paper.citation_count}</span>` : ''}
+          ${paper.citation_count ? `<span class="list-item-stat" title="Total citations (Semantic Scholar)">📊 ${paper.citation_count}</span>` : ''}
+          ${intCited ? `<span class="list-item-stat internal-cited" title="Cited by ${intCited} papers in library">⬅ ${intCited}</span>` : ''}
+          ${intRefs ? `<span class="list-item-stat internal-refs" title="References ${intRefs} papers in library">➡ ${intRefs}</span>` : ''}
         </div>
       </div>
     `;

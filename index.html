@@ -285,8 +285,11 @@
 
       <!-- Paper Detail Section (bottom) -->
       <div class="paper-detail-section" id="paperDetailSection">
-        <button class="close-btn" id="closeDetail" title="Close">✕</button>
-        <h2 id="detailTitle">-</h2>
+        <div class="detail-title-row">
+          <button class="bookmark-btn" id="bookmarkBtn" title="Toggle bookmark">☆</button>
+          <h2 id="detailTitle">-</h2>
+          <button class="close-btn" id="closeDetail" title="Close">✕</button>
+        </div>
         <div class="meta" id="detailMeta"></div>
         <div class="links" id="detailLinks"></div>
         <div class="abstract" id="detailAbstract"></div>
@@ -294,6 +297,7 @@
         <div class="citation-section" id="referencesSection"></div>
         <div class="citation-section" id="citedBySection"></div>
         <div class="similar-papers" id="similarPapers"></div>
+        <div id="detailTags"></div>
       </div>
     </div>
   </div>
