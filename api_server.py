@@ -504,54 +504,75 @@ def run_full_sync_background():
 
         results["review_sync"] = {"status": "success", **review_results}
 
-        # Step 5: Fetch citation data from Semantic Scholar (skip existing)
-        update_sync_progress(5, "Fetching citation data...")
-        print("Fetching citation data from Semantic Scholar...")
+        # Step 5: Fetch citation data from Semantic Scholar (skip existing, batch API)
+        update_sync_progress(5, "Fetching citation data (batch)...")
+        print("Fetching citation data from Semantic Scholar (batch, skip existing)...")
 
         S2_API_KEY = os.environ.get("S2_API_KEY")
         s2_headers = {"x-api-key": S2_API_KEY} if S2_API_KEY else {}
-        S2_FIELDS = "citationCount,citations.paperId,references.paperId"
+        S2_FIELDS = "paperId,citationCount,citations.paperId,references.paperId"
 
         papers_to_fetch = [p for p in papers if not p.get("s2_id") and p.get("doi")]
         citation_results = {"fetched": 0, "skipped": len(papers) - len(papers_to_fetch), "failed": 0}
 
-        for i, paper in enumerate(papers_to_fetch):
-            doi = paper.get("doi", "")
-            if not doi:
-                continue
+        if papers_to_fetch:
+            # Build DOI -> paper mapping
+            doi_to_paper = {p["doi"]: p for p in papers_to_fetch}
+            doi_ids = [f"DOI:{p['doi']}" for p in papers_to_fetch]
 
-            update_sync_progress(5, f"Fetching citations ({i+1}/{len(papers_to_fetch)})...", i+1, len(papers_to_fetch))
+            # Batch fetch (max 500 per request)
+            BATCH_SIZE = 500
+            for batch_start in range(0, len(doi_ids), BATCH_SIZE):
+                batch_ids = doi_ids[batch_start:batch_start + BATCH_SIZE]
+                batch_num = batch_start // BATCH_SIZE + 1
+                total_batches = (len(doi_ids) + BATCH_SIZE - 1) // BATCH_SIZE
 
-            try:
-                resp = requests.get(
-                    f"https://api.semanticscholar.org/graph/v1/paper/DOI:{doi}",
-                    params={"fields": S2_FIELDS},
-                    headers=s2_headers,
-                    timeout=15
-                )
+                update_sync_progress(5, f"Fetching batch {batch_num}/{total_batches} ({len(batch_ids)} papers)...")
+                print(f"  Fetching batch {batch_num}/{total_batches} ({len(batch_ids)} papers)...")
 
-                if resp.status_code == 200:
-                    s2_data = resp.json()
-                    paper["s2_id"] = s2_data.get("paperId", "")
-                    paper["citation_count"] = s2_data.get("citationCount", 0)
-                    refs = s2_data.get("references", []) or []
-                    paper["references"] = [r["paperId"] for r in refs if r and r.get("paperId")]
-                    cites = s2_data.get("citations", []) or []
-                    paper["citations"] = [c["paperId"] for c in cites if c and c.get("paperId")]
-                    citation_results["fetched"] += 1
-                elif resp.status_code == 429:
-                    print(f"  Rate limited, waiting 30s...")
-                    time.sleep(30)
-                    citation_results["failed"] += 1
-                else:
-                    citation_results["failed"] += 1
+                for attempt in range(3):
+                    try:
+                        resp = requests.post(
+                            "https://api.semanticscholar.org/graph/v1/paper/batch",
+                            json={"ids": batch_ids},
+                            params={"fields": S2_FIELDS},
+                            headers=s2_headers,
+                            timeout=120
+                        )
 
-                # Rate limiting
-                time.sleep(1)
+                        if resp.status_code == 200:
+                            results_data = resp.json()
+                            for i, s2_data in enumerate(results_data):
+                                doi = batch_ids[i][4:]  # Remove "DOI:" prefix
+                                paper = doi_to_paper.get(doi)
+                                if not paper:
+                                    continue
 
-            except Exception as e:
-                print(f"  Error fetching {doi}: {e}")
-                citation_results["failed"] += 1
+                                if s2_data:
+                                    paper["s2_id"] = s2_data.get("paperId", "")
+                                    paper["citation_count"] = s2_data.get("citationCount", 0)
+                                    refs = s2_data.get("references", []) or []
+                                    paper["references"] = [r["paperId"] for r in refs if r and r.get("paperId")]
+                                    cites = s2_data.get("citations", []) or []
+                                    paper["citations"] = [c["paperId"] for c in cites if c and c.get("paperId")]
+                                    citation_results["fetched"] += 1
+                                else:
+                                    citation_results["failed"] += 1
+                            break
+                        elif resp.status_code == 429:
+                            wait = 30 * (attempt + 1)
+                            print(f"  Rate limited, waiting {wait}s... (attempt {attempt+1}/3)")
+                            time.sleep(wait)
+                        else:
+                            print(f"  Batch failed: {resp.status_code}")
+                            citation_results["failed"] += len(batch_ids)
+                            break
+                    except Exception as e:
+                        print(f"  Batch error: {e}")
+                        if attempt < 2:
+                            time.sleep(10)
+                        else:
+                            citation_results["failed"] += len(batch_ids)
 
         results["citation_fetch"] = citation_results
         print(f"Citation fetch: {citation_results}")
@@ -706,54 +727,75 @@ def run_citations_sync_background():
 
         papers = papers_data.get('papers', [])
 
-        # Step 2: Fetch citation data from Semantic Scholar (ALL papers with DOI)
-        update_sync_progress(2, "Fetching citation data...")
-        print("Fetching citation data from Semantic Scholar (all papers)...")
+        # Step 2: Fetch citation data from Semantic Scholar (batch API)
+        update_sync_progress(2, "Fetching citation data (batch)...")
+        print("Fetching citation data from Semantic Scholar (batch)...")
 
         S2_API_KEY = os.environ.get("S2_API_KEY")
         s2_headers = {"x-api-key": S2_API_KEY} if S2_API_KEY else {}
-        S2_FIELDS = "citationCount,citations.paperId,references.paperId"
+        S2_FIELDS = "paperId,citationCount,citations.paperId,references.paperId"
 
         papers_with_doi = [p for p in papers if p.get("doi")]
         citation_results = {"fetched": 0, "skipped": len(papers) - len(papers_with_doi), "failed": 0}
 
-        for i, paper in enumerate(papers_with_doi):
-            doi = paper.get("doi", "")
-            if not doi:
-                continue
+        # Build DOI -> paper mapping
+        doi_to_paper = {p["doi"]: p for p in papers_with_doi}
+        doi_ids = [f"DOI:{p['doi']}" for p in papers_with_doi]
 
-            update_sync_progress(2, f"Fetching citations ({i+1}/{len(papers_with_doi)})...", i+1, len(papers_with_doi))
+        # Batch fetch (max 500 per request)
+        BATCH_SIZE = 500
+        for batch_start in range(0, len(doi_ids), BATCH_SIZE):
+            batch_ids = doi_ids[batch_start:batch_start + BATCH_SIZE]
+            batch_num = batch_start // BATCH_SIZE + 1
+            total_batches = (len(doi_ids) + BATCH_SIZE - 1) // BATCH_SIZE
 
-            try:
-                resp = requests.get(
-                    f"https://api.semanticscholar.org/graph/v1/paper/DOI:{doi}",
-                    params={"fields": S2_FIELDS},
-                    headers=s2_headers,
-                    timeout=15
-                )
+            update_sync_progress(2, f"Fetching batch {batch_num}/{total_batches} ({len(batch_ids)} papers)...")
+            print(f"  Fetching batch {batch_num}/{total_batches} ({len(batch_ids)} papers)...")
 
-                if resp.status_code == 200:
-                    s2_data = resp.json()
-                    paper["s2_id"] = s2_data.get("paperId", "")
-                    paper["citation_count"] = s2_data.get("citationCount", 0)
-                    refs = s2_data.get("references", []) or []
-                    paper["references"] = [r["paperId"] for r in refs if r and r.get("paperId")]
-                    cites = s2_data.get("citations", []) or []
-                    paper["citations"] = [c["paperId"] for c in cites if c and c.get("paperId")]
-                    citation_results["fetched"] += 1
-                elif resp.status_code == 429:
-                    print(f"  Rate limited, waiting 30s...")
-                    time.sleep(30)
-                    citation_results["failed"] += 1
-                else:
-                    citation_results["failed"] += 1
+            for attempt in range(3):
+                try:
+                    resp = requests.post(
+                        "https://api.semanticscholar.org/graph/v1/paper/batch",
+                        json={"ids": batch_ids},
+                        params={"fields": S2_FIELDS},
+                        headers=s2_headers,
+                        timeout=120
+                    )
 
-                # Rate limiting
-                time.sleep(1)
+                    if resp.status_code == 200:
+                        results_data = resp.json()
+                        for i, s2_data in enumerate(results_data):
+                            # Extract DOI from batch_ids (remove "DOI:" prefix)
+                            doi = batch_ids[i][4:]  # Remove "DOI:" prefix
+                            paper = doi_to_paper.get(doi)
+                            if not paper:
+                                continue
 
-            except Exception as e:
-                print(f"  Error fetching {doi}: {e}")
-                citation_results["failed"] += 1
+                            if s2_data:  # Can be null if not found
+                                paper["s2_id"] = s2_data.get("paperId", "")
+                                paper["citation_count"] = s2_data.get("citationCount", 0)
+                                refs = s2_data.get("references", []) or []
+                                paper["references"] = [r["paperId"] for r in refs if r and r.get("paperId")]
+                                cites = s2_data.get("citations", []) or []
+                                paper["citations"] = [c["paperId"] for c in cites if c and c.get("paperId")]
+                                citation_results["fetched"] += 1
+                            else:
+                                citation_results["failed"] += 1
+                        break
+                    elif resp.status_code == 429:
+                        wait = 30 * (attempt + 1)
+                        print(f"  Rate limited, waiting {wait}s... (attempt {attempt+1}/3)")
+                        time.sleep(wait)
+                    else:
+                        print(f"  Batch failed: {resp.status_code}")
+                        citation_results["failed"] += len(batch_ids)
+                        break
+                except Exception as e:
+                    print(f"  Batch error: {e}")
+                    if attempt < 2:
+                        time.sleep(10)
+                    else:
+                        citation_results["failed"] += len(batch_ids)
 
         results["citation_fetch"] = citation_results
         print(f"Citation fetch: {citation_results}")
