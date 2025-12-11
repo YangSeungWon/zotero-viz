@@ -108,6 +108,7 @@
         <input type="checkbox" id="showCitations" checked>
         <label for="showCitations">Citations</label>
       </div>
+      <button id="advancedSearchBtn" style="background: #30363d;" title="Advanced Search"><i data-lucide="sliders-horizontal"></i></button>
       <button id="resetFilter" style="background: #30363d;">Reset</button>
       <div class="mode-toggle" id="modeToggle">
         <span class="mode-option" data-mode="highlight">Highlight</span>
@@ -384,6 +385,65 @@
     </div>
   </div>
 
+  <!-- Advanced Search Modal -->
+  <div class="modal-overlay" id="advancedSearchModal">
+    <div class="modal" style="width: 500px;">
+      <div class="modal-header">
+        <h3><i data-lucide="sliders-horizontal"></i> Advanced Search</h3>
+        <button class="modal-close" id="closeAdvancedSearch"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-content">
+        <div class="filter-pipeline">
+          <div class="pipeline-start">
+            <span class="pipeline-label">All Papers</span>
+            <span class="pipeline-count" id="pipelineTotal">0</span>
+          </div>
+          <div class="pipeline-blocks" id="pipelineBlocks">
+            <!-- Filter blocks will be added here -->
+          </div>
+          <div class="pipeline-add">
+            <button class="btn-add-filter" id="addFilterBlock">
+              <i data-lucide="plus"></i> Add Filter
+            </button>
+          </div>
+        </div>
+        <div class="pipeline-actions">
+          <button id="applyPipeline" class="btn-primary">Apply</button>
+          <button id="resetPipeline" class="btn-secondary">Reset</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Block Template (hidden) -->
+  <template id="filterBlockTemplate">
+    <div class="filter-block" data-block-id="">
+      <div class="filter-block-header">
+        <select class="filter-type-select">
+          <option value="cluster">Cluster</option>
+          <option value="tag">Tag</option>
+          <option value="year">Year Range</option>
+          <option value="text">Text Search</option>
+          <option value="semantic">AI Semantic</option>
+          <option value="venue">Venue Quality</option>
+          <option value="bookmarked">Bookmarked</option>
+        </select>
+        <div class="filter-block-actions">
+          <button class="btn-move-up" title="Move up"><i data-lucide="chevron-up"></i></button>
+          <button class="btn-move-down" title="Move down"><i data-lucide="chevron-down"></i></button>
+          <button class="btn-remove-block" title="Remove"><i data-lucide="x"></i></button>
+        </div>
+      </div>
+      <div class="filter-block-content">
+        <!-- Content varies by filter type -->
+      </div>
+      <div class="filter-block-footer">
+        <span class="block-arrow"><i data-lucide="arrow-down"></i></span>
+        <span class="block-result-count">0</span>
+      </div>
+    </div>
+  </template>
+
   <!-- New Idea Modal -->
   <div class="modal-overlay" id="newIdeaModal" style="display: none;">
     <div class="modal">
@@ -460,6 +520,7 @@
   <script src="js/detail.js"></script>
   <script src="js/mobile.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/advanced-search.js"></script>
   <script src="js/list.js"></script>
   <script src="js/ideas.js"></script>
   <script src="js/app.js"></script>
