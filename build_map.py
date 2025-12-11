@@ -121,9 +121,10 @@ def extract_text_from_html(html_content: str) -> str:
 
 def get_venue_score(row) -> float:
     """venue quality 점수 계산"""
-    # Publication Title, Conference Name, Series 등에서 검색
+    # Publication Title, Proceedings Title, Conference Name, Series 등에서 검색
     text_to_check = " ".join([
         str(row.get("Publication Title", "")),
+        str(row.get("Proceedings Title", "")),
         str(row.get("Conference Name", "")),
         str(row.get("Series", "")),
     ]).lower()
@@ -738,13 +739,20 @@ def main():
 
     # S2 ID → paper ID 매핑 생성 후 citation_links 재생성
     s2_to_id = {r["s2_id"]: r["id"] for r in records if r.get("s2_id")}
-    citation_links = []
+    citation_links_set = set()
     for rec in records:
         source_id = rec["id"]
+        # 이 논문이 인용한 것 (references)
         for ref_s2_id in rec.get("references", []):
             if ref_s2_id in s2_to_id:
                 target_id = s2_to_id[ref_s2_id]
-                citation_links.append({"source": source_id, "target": target_id})
+                citation_links_set.add((source_id, target_id))
+        # 이 논문을 인용한 것 (citations) - 역방향
+        for cite_s2_id in rec.get("citations", []):
+            if cite_s2_id in s2_to_id:
+                citing_id = s2_to_id[cite_s2_id]
+                citation_links_set.add((citing_id, source_id))
+    citation_links = [{"source": s, "target": t} for s, t in citation_links_set]
     print(f"   - Internal citation links: {len(citation_links)}")
 
     # 출력 데이터에 클러스터 중심점 포함
