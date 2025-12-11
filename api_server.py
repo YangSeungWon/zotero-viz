@@ -806,6 +806,47 @@ def run_citations_sync_background():
         results["citation_fetch"] = citation_results
         print(f"Citation fetch: {citation_results}")
 
+        # Step 2.5: Crossref fallback for papers where S2 returned no refs
+        papers_no_refs = [p for p in papers if p.get("doi") and p.get("s2_id") and not p.get("references")]
+        if papers_no_refs:
+            update_sync_progress(2, f"Crossref fallback ({len(papers_no_refs)} papers)...")
+            print(f"Fetching refs from Crossref for {len(papers_no_refs)} papers...")
+
+            # Build DOI -> s2_id mapping for our library
+            our_doi_to_s2id = {p["doi"].lower(): p["s2_id"] for p in papers if p.get("doi") and p.get("s2_id")}
+            crossref_results = {"fetched": 0, "failed": 0}
+
+            for i, paper in enumerate(papers_no_refs):
+                doi = paper["doi"]
+                if i % 10 == 0:
+                    update_sync_progress(2, f"Crossref ({i+1}/{len(papers_no_refs)})...", i+1, len(papers_no_refs))
+
+                try:
+                    resp = requests.get(
+                        f"https://api.crossref.org/works/{doi}",
+                        headers={"User-Agent": "ZoteroViz/1.0 (mailto:research@example.com)"},
+                        timeout=15
+                    )
+                    if resp.status_code == 200:
+                        cr_data = resp.json().get("message", {})
+                        cr_refs = cr_data.get("reference", [])
+                        if cr_refs:
+                            # Convert Crossref DOIs to S2 paper IDs
+                            s2_refs = []
+                            for ref in cr_refs:
+                                ref_doi = ref.get("DOI", "").lower()
+                                if ref_doi and ref_doi in our_doi_to_s2id:
+                                    s2_refs.append(our_doi_to_s2id[ref_doi])
+                            if s2_refs:
+                                paper["references"] = s2_refs
+                                crossref_results["fetched"] += 1
+                    time.sleep(0.5)  # Rate limit
+                except Exception as e:
+                    crossref_results["failed"] += 1
+
+            print(f"Crossref fallback: {crossref_results}")
+            results["crossref_fallback"] = crossref_results
+
         # Step 3: Recalculate citation_links
         update_sync_progress(3, "Recalculating citation links...")
         print("Recalculating internal citation links...")
