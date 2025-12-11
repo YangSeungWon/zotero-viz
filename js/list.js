@@ -304,11 +304,21 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// Venue abbreviation map
+// Venue abbreviation map (order matters - more specific patterns first)
 const VENUE_ABBREVIATIONS = {
-  // HCI
-  'chi': 'CHI',
-  'human factors in computing': 'CHI',
+  // HCI - specific patterns first
+  'ozchi': 'OzCHI',
+  'australian computer-human': 'OzCHI',
+  'pacmhci': 'PACMHCI',
+  'proc. acm hum.-comput. interact': 'PACMHCI',
+  'proceedings of the acm on human-computer': 'PACMHCI',
+  'tochi': 'TOCHI',
+  'trans. comput.-hum. interact': 'TOCHI',
+  'transactions on computer-human interaction': 'TOCHI',
+  'acm trans. comput.-hum. interact': 'TOCHI',
+  'mobilehci': 'MobileHCI',
+  'mobile hci': 'MobileHCI',
+  'mobile human-computer': 'MobileHCI',
   'uist': 'UIST',
   'user interface software': 'UIST',
   'ubicomp': 'UbiComp',
@@ -318,15 +328,17 @@ const VENUE_ABBREVIATIONS = {
   'cscw': 'CSCW',
   'computer-supported cooperative': 'CSCW',
   'computer supported cooperative': 'CSCW',
-  'tochi': 'TOCHI',
-  'trans. comput.-hum. interact': 'TOCHI',
+  'chi ': 'CHI',
+  'chi\'': 'CHI',
+  'human factors in computing': 'CHI',
+  'conference on human factors': 'CHI',
   'dis ': 'DIS',
+  'dis\'': 'DIS',
   'designing interactive systems': 'DIS',
   'iui': 'IUI',
   'intelligent user interfaces': 'IUI',
-  'mobilehci': 'MobileHCI',
-  'mobile hci': 'MobileHCI',
-  'mobile human-computer': 'MobileHCI',
+  'tei': 'TEI',
+  'tangible, embedded': 'TEI',
   // VR/AR
   'ieee vr': 'IEEE VR',
   'virtual reality': 'VR',
@@ -337,17 +349,18 @@ const VENUE_ABBREVIATIONS = {
   'neurips': 'NeurIPS',
   'neural information processing': 'NeurIPS',
   'icml': 'ICML',
-  'machine learning': 'ICML',
+  'international conference on machine learning': 'ICML',
   'iclr': 'ICLR',
   'learning representations': 'ICLR',
   'aaai': 'AAAI',
-  'artificial intelligence': 'AAAI',
   'cvpr': 'CVPR',
   'computer vision and pattern': 'CVPR',
   'iccv': 'ICCV',
   'eccv': 'ECCV',
-  'acl': 'ACL',
-  'computational linguistics': 'ACL',
+  'naacl': 'NAACL',
+  'acl ': 'ACL',
+  'acl\'': 'ACL',
+  'association for computational linguistics': 'ACL',
   'emnlp': 'EMNLP',
   'empirical methods': 'EMNLP',
   // Graphics
@@ -356,7 +369,7 @@ const VENUE_ABBREVIATIONS = {
   'transactions on graphics': 'TOG',
   // Systems
   'sosp': 'SOSP',
-  'operating systems': 'SOSP',
+  'operating systems principles': 'SOSP',
   'osdi': 'OSDI',
   'systems design': 'OSDI',
   // Web
@@ -366,6 +379,10 @@ const VENUE_ABBREVIATIONS = {
   'arxiv': 'arXiv',
   'acm computing surveys': 'CSUR',
   'communications of the acm': 'CACM',
+  'nature': 'Nature',
+  'science': 'Science',
+  'pnas': 'PNAS',
+  'plos one': 'PLOS ONE',
 };
 
 function abbreviateVenue(venue) {
