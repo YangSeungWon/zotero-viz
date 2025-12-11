@@ -125,9 +125,7 @@ function renderListView(papers) {
       const paper = allPapers.find(p => p.id === paperId);
       if (paper) {
         showDetail(paper);
-        // Update selection state
-        container.querySelectorAll('.list-item').forEach(i => i.classList.remove('selected'));
-        item.classList.add('selected');
+        // Selection state is handled by renderListView() called from showDetail()
       }
     });
   });

@@ -760,10 +760,20 @@ def update_existing_idea(zotero_key):
     """Update an existing idea"""
     try:
         data = request.json
-        data['zotero_key'] = zotero_key
 
         zot = get_zotero_client()
-        success = update_idea(zot, data)
+
+        # Fetch existing idea first to preserve fields not being updated
+        ideas = fetch_ideas(zot)
+        existing_idea = next((i for i in ideas if i.get('zotero_key') == zotero_key), None)
+        if not existing_idea:
+            return jsonify({"success": False, "error": "Idea not found"}), 404
+
+        # Merge updates into existing idea
+        for key, value in data.items():
+            existing_idea[key] = value
+
+        success = update_idea(zot, existing_idea)
 
         if success:
             return jsonify({"success": True})

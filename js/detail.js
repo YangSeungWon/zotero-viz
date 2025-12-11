@@ -3,6 +3,20 @@
    =========================================== */
 
 // ============================================================
+// View-Aware Rendering Helper
+// ============================================================
+
+function renderCurrentView() {
+  if (currentView === 'timeline') {
+    renderTimeline(currentFiltered);
+  } else if (currentView === 'list') {
+    renderListView(currentFiltered);
+  } else {
+    render(currentFiltered);
+  }
+}
+
+// ============================================================
 // Zotero Deep Link Helper
 // ============================================================
 
@@ -220,7 +234,7 @@ function clearSelection() {
   selectedPaper = null;
   connectedPapers = new Set();
   updateUrlWithPaper(null);  // Clear paper from URL
-  render(currentFiltered);
+  renderCurrentView();
   showDefaultPanel();
 }
 
@@ -395,7 +409,7 @@ function showDetail(item) {
     }
   });
 
-  render(currentFiltered);
+  renderCurrentView();
 
   const isBookmarked = bookmarkedPapers.has(item.id);
   document.getElementById('detailTitle').textContent = item.title || 'Untitled';
@@ -418,7 +432,7 @@ function showDetail(item) {
     if (typeof lucide !== 'undefined') {
       lucide.createIcons();
     }
-    render(currentFiltered);
+    renderCurrentView();
   });
 
   const typeClass = item.is_paper ? 'paper' : 'app';
@@ -575,7 +589,7 @@ function showMobileDetail(item) {
     }
   });
 
-  render(currentFiltered);
+  renderCurrentView();
 
   const isBookmarked = bookmarkedPapers.has(item.id);
   document.getElementById('mobileDetailTitle').innerHTML = `
@@ -597,7 +611,7 @@ function showMobileDetail(item) {
     if (typeof lucide !== 'undefined') {
       lucide.createIcons();
     }
-    render(currentFiltered);
+    renderCurrentView();
   });
 
   const typeClass = item.is_paper ? 'paper' : 'app';

@@ -68,12 +68,14 @@ function render(filteredPapers) {
 
     if (selectedPaper !== null && p.id === selectedPaper.id) return baseWidth + 1.5;
     if (selectedPaper !== null && connectedPapers.has(p.id)) return baseWidth + 1;
+    if (bookmarkedPapers.has(p.id)) return baseWidth + 1;  // bookmark border
     return baseWidth;
   }
 
   function getLineColor(p, isolated = false) {
-    if (selectedPaper !== null && p.id === selectedPaper.id) return '#ffd700';
+    if (selectedPaper !== null && p.id === selectedPaper.id) return '#00ffff';  // cyan for selection
     if (selectedPaper !== null && connectedPapers.has(p.id)) return '#ff6b6b';
+    if (bookmarkedPapers.has(p.id)) return '#ffd700';  // gold for bookmark
     if (isolated) return '#4a5568'; // 회색 테두리 (isolated)
     return '#0d1117';
   }

@@ -247,6 +247,103 @@ def embed_with_sentence_transformers(texts: list, model_name: str = "paraphrase-
     return np.array(embeddings)
 
 
+def chunk_text(text: str, max_chars: int = 1500) -> list:
+    """긴 텍스트를 청크로 분할 (대략 512 토큰 ≈ 1500자)"""
+    if not text or len(text) <= max_chars:
+        return [text] if text else []
+
+    chunks = []
+    # 문단/문장 단위로 분할 시도
+    paragraphs = text.split('\n\n')
+    current_chunk = ""
+
+    for para in paragraphs:
+        if len(current_chunk) + len(para) <= max_chars:
+            current_chunk += ("\n\n" if current_chunk else "") + para
+        else:
+            if current_chunk:
+                chunks.append(current_chunk)
+            # 문단이 너무 길면 강제 분할
+            if len(para) > max_chars:
+                for i in range(0, len(para), max_chars):
+                    chunks.append(para[i:i+max_chars])
+                current_chunk = ""
+            else:
+                current_chunk = para
+
+    if current_chunk:
+        chunks.append(current_chunk)
+
+    return chunks if chunks else [text[:max_chars]]
+
+
+def embed_with_weighted_sections(df: pd.DataFrame, model_name: str = "paraphrase-multilingual-MiniLM-L12-v2",
+                                  title_weight: float = 0.3, abstract_weight: float = 0.4, notes_weight: float = 0.3) -> np.ndarray:
+    """섹션별 가중치 + 청킹으로 임베딩"""
+    from sentence_transformers import SentenceTransformer
+
+    print(f"Loading model: {model_name}")
+    model = SentenceTransformer(model_name)
+
+    embeddings = []
+    total = len(df)
+
+    print(f"Embedding {total} papers with weighted sections...")
+    print(f"  Weights: title={title_weight}, abstract={abstract_weight}, notes={notes_weight}")
+
+    for idx, (_, row) in enumerate(df.iterrows()):
+        if (idx + 1) % 50 == 0 or idx == 0:
+            print(f"  Processed {idx + 1}/{total}")
+
+        section_embs = []
+        section_weights = []
+
+        # Title
+        title = row.get("Title", "")
+        if pd.notna(title) and title and str(title).lower() != "nan":
+            title_emb = model.encode(str(title))
+            section_embs.append(title_emb)
+            section_weights.append(title_weight)
+
+        # Abstract
+        abstract = row.get("Abstract Note", "")
+        if pd.notna(abstract) and abstract and str(abstract).lower() != "nan":
+            abstract_str = str(abstract)
+            chunks = chunk_text(abstract_str)
+            if chunks:
+                chunk_embs = model.encode(chunks)
+                abstract_emb = np.mean(chunk_embs, axis=0) if len(chunks) > 1 else chunk_embs[0]
+                section_embs.append(abstract_emb)
+                section_weights.append(abstract_weight)
+
+        # Notes
+        notes = row.get("Notes", "")
+        if pd.notna(notes) and notes and str(notes).lower() != "nan":
+            notes_text = extract_text_from_html(str(notes))
+            if notes_text:
+                chunks = chunk_text(notes_text)
+                if chunks:
+                    chunk_embs = model.encode(chunks)
+                    notes_emb = np.mean(chunk_embs, axis=0) if len(chunks) > 1 else chunk_embs[0]
+                    section_embs.append(notes_emb)
+                    section_weights.append(notes_weight)
+
+        # 가중 평균
+        if section_embs:
+            weights = np.array(section_weights)
+            weights = weights / weights.sum()  # 정규화
+            final_emb = np.average(section_embs, axis=0, weights=weights)
+        else:
+            # fallback: 제목만이라도
+            fallback_title = row.get("Title", "Untitled")
+            final_emb = model.encode(str(fallback_title) if pd.notna(fallback_title) else "Untitled")
+
+        embeddings.append(final_emb)
+
+    print(f"  Processed {total}/{total}")
+    return np.array(embeddings)
+
+
 def embed_with_openai(texts: list, model: str = "text-embedding-3-small") -> np.ndarray:
     """OpenAI API로 임베딩"""
     import openai
@@ -310,8 +407,8 @@ def main():
     parser.add_argument("--output", default="papers.json", help="Output JSON file")
     parser.add_argument("--source", choices=["csv", "api"], default="csv",
                         help="Data source: csv (default) or api (Zotero API)")
-    parser.add_argument("--embedding", choices=["local", "local-large", "openai"], default="local",
-                        help="Embedding: local (multilingual-MiniLM), local-large (multilingual-mpnet), openai")
+    parser.add_argument("--embedding", choices=["local", "local-large", "weighted", "openai"], default="weighted",
+                        help="Embedding: local (simple), local-large, weighted (chunking+weights, recommended), openai")
     parser.add_argument("--clusters", type=int, default=0,
                         help="Number of clusters (0 = auto-detect optimal k)")
     parser.add_argument("--dim-reduction", choices=["tsne", "pca", "umap"], default="umap",
@@ -368,13 +465,18 @@ def main():
 
     # 3. 텍스트 임베딩
     print("\n[3/5] Building embeddings...")
-    texts = [build_text_for_embedding(row) for _, row in df.iterrows()]
 
-    if args.embedding == "local":
+    if args.embedding == "weighted":
+        # 청킹 + 섹션별 가중치 (추천)
+        embeddings = embed_with_weighted_sections(df, "paraphrase-multilingual-MiniLM-L12-v2")
+    elif args.embedding == "local":
+        texts = [build_text_for_embedding(row) for _, row in df.iterrows()]
         embeddings = embed_with_sentence_transformers(texts, "paraphrase-multilingual-MiniLM-L12-v2")
     elif args.embedding == "local-large":
+        texts = [build_text_for_embedding(row) for _, row in df.iterrows()]
         embeddings = embed_with_sentence_transformers(texts, "paraphrase-multilingual-mpnet-base-v2")
     else:
+        texts = [build_text_for_embedding(row) for _, row in df.iterrows()]
         embeddings = embed_with_openai(texts)
 
     print(f"  Embedding shape: {embeddings.shape}")

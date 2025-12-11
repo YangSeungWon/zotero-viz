@@ -122,4 +122,10 @@ async function initAuth() {
 }
 
 // Run auth check on page load
-document.addEventListener('DOMContentLoaded', initAuth);
+document.addEventListener('DOMContentLoaded', () => {
+  // Initialize Lucide icons immediately
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+  initAuth();
+});

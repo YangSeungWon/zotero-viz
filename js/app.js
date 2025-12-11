@@ -9,6 +9,11 @@ function initApp() {
   if (appInitialized) return;
   appInitialized = true;
 
+  // Initialize Lucide icons for header elements
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+
   // Restore panel width before render to avoid layout shift
   const savedWidth = localStorage.getItem('detailPanelWidth');
   if (savedWidth) {

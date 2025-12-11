@@ -1435,8 +1435,8 @@ button:hover {
 }
 
 .list-item.selected {
-  border-color: var(--accent);
-  background: rgba(88, 166, 255, 0.08);
+  border-color: #00ffff;
+  background: rgba(0, 255, 255, 0.1);
 }
 
 .list-item-main {
@@ -1569,8 +1569,9 @@ button:hover {
   border-color: #ffd70066;
 }
 
-.list-bookmark-btn.active [data-lucide].filled {
+.list-bookmark-btn.active svg {
   fill: #ffd700;
+  color: #ffd700;
 }
 
 .list-idea-btn.has-ideas {

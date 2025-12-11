@@ -69,12 +69,12 @@ function renderTimeline(filteredPapers) {
           return 0.5;
         }),
         color: papers.map(p => {
-          if (selectedPaper && p.id === selectedPaper.id) return '#ffd700';
+          if (selectedPaper && p.id === selectedPaper.id) return '#00ffff';  // cyan for selection
           if (selectedPaper && connectedPapers.has(p.id)) {
             // References (older) = blue, Citations (newer) = orange
             return p.year < selectedPaper.year ? '#58a6ff' : '#f97316';
           }
-          if (bookmarkedPapers.has(p.id)) return '#ffd700';
+          if (bookmarkedPapers.has(p.id)) return '#ffd700';  // gold for bookmark
           return '#0d1117';
         })
       }
@@ -128,13 +128,28 @@ function renderTimeline(filteredPapers) {
   };
 
   const plotDiv = document.getElementById('timelinePlot');
+  let pointClicked = false;
 
   Plotly.newPlot(plotDiv, [paperTrace], layout, config).then(function() {
     plotDiv.on('plotly_click', function(data) {
       if (data.points && data.points[0] && data.points[0].customdata) {
+        pointClicked = true;
         showDetail(data.points[0].customdata);
       }
     });
+
+    // Empty space click to clear selection
+    const plotArea = plotDiv.querySelector('.nsewdrag');
+    if (plotArea) {
+      plotArea.addEventListener('click', function(e) {
+        setTimeout(() => {
+          if (!pointClicked && selectedPaper !== null) {
+            clearSelection();
+          }
+          pointClicked = false;
+        }, 10);
+      });
+    }
 
     plotDiv.on('plotly_hover', function(data) {
       if (!data.points || !data.points[0] || !data.points[0].customdata) return;
