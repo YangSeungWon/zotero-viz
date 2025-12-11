@@ -220,6 +220,14 @@ function renderListView(papers) {
 function sortPapersForList(papers, sortBy) {
   const sorted = [...papers];
 
+  // Build internal citation map for secondary sort
+  const internalCited = {};
+  if (citationLinks) {
+    for (const link of citationLinks) {
+      internalCited[link.target] = (internalCited[link.target] || 0) + 1;
+    }
+  }
+
   switch (sortBy) {
     case 'similarity':
       if (semanticSearchMode && semanticSearchResults) {
@@ -229,16 +237,28 @@ function sortPapersForList(papers, sortBy) {
         sorted.sort((a, b) => (simMap.get(b.id) || 0) - (simMap.get(a.id) || 0));
       } else {
         // Default to year desc if no similarity scores
-        sorted.sort((a, b) => (b.year || 0) - (a.year || 0));
+        sorted.sort((a, b) => {
+          const yearDiff = (b.year || 0) - (a.year || 0);
+          if (yearDiff !== 0) return yearDiff;
+          return (internalCited[b.id] || 0) - (internalCited[a.id] || 0);
+        });
       }
       break;
 
     case 'year-desc':
-      sorted.sort((a, b) => (b.year || 0) - (a.year || 0));
+      sorted.sort((a, b) => {
+        const yearDiff = (b.year || 0) - (a.year || 0);
+        if (yearDiff !== 0) return yearDiff;
+        return (internalCited[b.id] || 0) - (internalCited[a.id] || 0);
+      });
       break;
 
     case 'year-asc':
-      sorted.sort((a, b) => (a.year || 0) - (b.year || 0));
+      sorted.sort((a, b) => {
+        const yearDiff = (a.year || 0) - (b.year || 0);
+        if (yearDiff !== 0) return yearDiff;
+        return (internalCited[b.id] || 0) - (internalCited[a.id] || 0);
+      });
       break;
 
     case 'title':
@@ -249,7 +269,9 @@ function sortPapersForList(papers, sortBy) {
       sorted.sort((a, b) => {
         const labelA = clusterLabels[a.cluster] || `Cluster ${a.cluster}`;
         const labelB = clusterLabels[b.cluster] || `Cluster ${b.cluster}`;
-        return labelA.localeCompare(labelB);
+        const clusterDiff = labelA.localeCompare(labelB);
+        if (clusterDiff !== 0) return clusterDiff;
+        return (internalCited[b.id] || 0) - (internalCited[a.id] || 0);
       });
       break;
 

@@ -335,6 +335,7 @@ function initMiniTimelineBrush() {
 // Switch between map, timeline, and list view
 function switchView(view) {
   currentView = view;
+  localStorage.setItem('currentView', view);
 
   const mapPlot = document.getElementById('plot');
   const timelinePlot = document.getElementById('timelinePlot');
