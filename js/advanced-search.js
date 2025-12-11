@@ -115,6 +115,8 @@ function createBlockElement(block) {
         <option value="semantic" ${block.type === 'semantic' ? 'selected' : ''}>AI Semantic</option>
         <option value="venue" ${block.type === 'venue' ? 'selected' : ''}>Venue Quality</option>
         <option value="bookmarked" ${block.type === 'bookmarked' ? 'selected' : ''}>Bookmarked</option>
+        <option value="idea" ${block.type === 'idea' ? 'selected' : ''}>Idea Papers</option>
+        <option value="idea-nearby" ${block.type === 'idea-nearby' ? 'selected' : ''}>Idea + Nearby</option>
       </select>
       <div class="filter-block-actions">
         <button class="btn-move-up" title="Move up"><i data-lucide="chevron-up"></i></button>
@@ -198,6 +200,25 @@ function getBlockContentHtml(block) {
     case 'bookmarked':
       return `<div style="text-align: center; color: var(--text-muted); font-size: 12px;">Show only bookmarked papers</div>`;
 
+    case 'idea':
+      const ideaOptions = (typeof allIdeas !== 'undefined' ? allIdeas : [])
+        .map(idea => `<option value="${idea.zotero_key}" ${block.value === idea.zotero_key ? 'selected' : ''}>${idea.title}</option>`)
+        .join('');
+      return `<select class="block-idea-select"><option value="">Select idea...</option>${ideaOptions}</select>`;
+
+    case 'idea-nearby':
+      const ideaOptions2 = (typeof allIdeas !== 'undefined' ? allIdeas : [])
+        .map(idea => `<option value="${idea.zotero_key}" ${block.value?.ideaKey === idea.zotero_key ? 'selected' : ''}>${idea.title}</option>`)
+        .join('');
+      const distance = block.value?.distance || 50;
+      return `
+        <select class="block-idea-select""><option value="">Select idea...</option>${ideaOptions2}</select>
+        <div style="margin-top: 8px;">
+          <label style="font-size: 11px; color: var(--text-muted);">Distance: <span class="distance-value">${distance}</span></label>
+          <input type="range" class="block-distance-slider" min="10" max="200" value="${distance}" style="width: 100%;">
+        </div>
+      `;
+
     default:
       return '';
   }
@@ -271,6 +292,32 @@ function setupBlockContentListeners(blockEl, block) {
   if (block.type === 'bookmarked') {
     block.value = true;
   }
+
+  // Idea filter
+  const ideaSelect = blockEl.querySelector('.block-idea-select');
+  if (ideaSelect && block.type === 'idea') {
+    ideaSelect.addEventListener('change', (e) => {
+      updateBlockValue(block.id, e.target.value || null);
+    });
+  }
+
+  // Idea + Nearby filter
+  if (ideaSelect && block.type === 'idea-nearby') {
+    const distanceSlider = blockEl.querySelector('.block-distance-slider');
+    const distanceValue = blockEl.querySelector('.distance-value');
+
+    const updateIdeaNearby = () => {
+      const ideaKey = ideaSelect.value || null;
+      const distance = parseInt(distanceSlider?.value || 50);
+      if (distanceValue) distanceValue.textContent = distance;
+      updateBlockValue(block.id, ideaKey ? { ideaKey, distance } : null);
+    };
+
+    ideaSelect.addEventListener('change', updateIdeaNearby);
+    if (distanceSlider) {
+      distanceSlider.addEventListener('input', updateIdeaNearby);
+    }
+  }
 }
 
 // ============================================================
@@ -324,9 +371,58 @@ async function applyBlockFilter(papers, block) {
     case 'bookmarked':
       return papers.filter(p => bookmarkedPapers.has(p.id));
 
+    case 'idea':
+      return applyIdeaFilter(papers, block.value);
+
+    case 'idea-nearby':
+      return applyIdeaNearbyFilter(papers, block.value);
+
     default:
       return papers;
   }
+}
+
+function applyIdeaFilter(papers, ideaKey) {
+  if (!ideaKey) return papers;
+
+  const idea = (typeof allIdeas !== 'undefined' ? allIdeas : []).find(i => i.zotero_key === ideaKey);
+  if (!idea || !idea.connected_papers || idea.connected_papers.length === 0) {
+    return [];
+  }
+
+  const connectedKeys = new Set(idea.connected_papers);
+  return papers.filter(p => connectedKeys.has(p.zotero_key));
+}
+
+function applyIdeaNearbyFilter(papers, value) {
+  if (!value || !value.ideaKey) return papers;
+
+  const idea = (typeof allIdeas !== 'undefined' ? allIdeas : []).find(i => i.zotero_key === value.ideaKey);
+  if (!idea || !idea.connected_papers || idea.connected_papers.length === 0) {
+    return [];
+  }
+
+  // Get connected papers with their coordinates
+  const connectedPapers = idea.connected_papers
+    .map(key => allPapers.find(p => p.zotero_key === key))
+    .filter(Boolean);
+
+  if (connectedPapers.length === 0) return [];
+
+  const maxDistance = value.distance || 50;
+
+  // Filter papers that are either connected OR within distance of any connected paper
+  return papers.filter(p => {
+    // If it's a connected paper, include it
+    if (idea.connected_papers.includes(p.zotero_key)) return true;
+
+    // Check distance to any connected paper
+    for (const cp of connectedPapers) {
+      const dist = Math.sqrt(Math.pow(p.x - cp.x, 2) + Math.pow(p.y - cp.y, 2));
+      if (dist <= maxDistance) return true;
+    }
+    return false;
+  });
 }
 
 async function applySemanticFilter(papers, query) {
