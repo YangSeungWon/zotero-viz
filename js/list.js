@@ -86,14 +86,14 @@ function renderListView(papers) {
           </div>
         </div>
         <div class="list-item-main">
-          <div class="list-item-header">
+          <div class="list-item-title">${escapeHtml(paper.title)}</div>
+          <div class="list-item-meta-line">
             ${simScore}
             <span class="list-item-year">${paper.year || '?'}</span>
             <span class="list-item-cluster" style="background: ${clusterColor}; color: black;">${clusterLabel}</span>
+            <span class="list-item-authors" title="${escapeHtml(paper.authors || '')}">${escapeHtml(abbreviateAuthors(paper.authors))}</span>
+            <span class="list-item-venue" title="${escapeHtml(paper.venue || '')}">${escapeHtml(abbreviateVenue(paper.venue))}</span>
           </div>
-          <div class="list-item-title">${escapeHtml(paper.title)}</div>
-          <div class="list-item-authors" title="${escapeHtml(paper.authors || '')}">${escapeHtml(abbreviateAuthors(paper.authors))}</div>
-          <div class="list-item-venue" title="${escapeHtml(paper.venue || '')}">${escapeHtml(abbreviateVenue(paper.venue))}</div>
         </div>
         <div class="list-item-meta">
           ${paper.citation_count ? `<span class="list-item-stat" title="Total citations (Semantic Scholar)"><i data-lucide="quote"></i> ${paper.citation_count}</span>` : ''}
