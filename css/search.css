@@ -208,6 +208,37 @@
   box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.25) !important;
 }
 
+.semantic-threshold {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.semantic-threshold label {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.semantic-threshold .threshold-value {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.semantic-threshold input[type="range"] {
+  flex: 1;
+  height: 4px;
+  accent-color: var(--accent);
+}
+
+.semantic-hint {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--color-warning);
+  min-height: 16px;
+}
+
 /* Semantic search loading state */
 .filter-block.loading .filter-block-content::after {
   content: '';

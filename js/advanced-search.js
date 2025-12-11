@@ -78,6 +78,7 @@ function updateBlockValue(blockId, value) {
   const block = filterBlocks.find(b => b.id === blockId);
   if (!block) return;
 
+  console.log('updateBlockValue:', blockId, value, block.type);
   block.value = value;
   recalculatePipeline();
 }
@@ -185,7 +186,16 @@ function getBlockContentHtml(block) {
       return `<input type="text" class="block-text-input" placeholder="Search title, authors, abstract..." value="${block.value || ''}">`;
 
     case 'semantic':
-      return `<input type="text" class="block-semantic-input" placeholder="Describe what you're looking for..." value="${block.value || ''}">`;
+      const semQuery = block.value?.query || '';
+      const semThreshold = block.value?.threshold || 30;
+      return `
+        <input type="text" class="block-semantic-input" placeholder="찾고 싶은 내용을 설명하세요..." value="${semQuery}">
+        <div class="semantic-threshold">
+          <label>유사도 ≥ <span class="threshold-value">${semThreshold}%</span></label>
+          <input type="range" class="block-threshold-slider" min="10" max="80" value="${semThreshold}">
+        </div>
+        <div class="semantic-hint"></div>
+      `;
 
     case 'venue':
       return `
@@ -265,20 +275,37 @@ function setupBlockContentListeners(blockEl, block) {
   }
 
   const semanticInput = blockEl.querySelector('.block-semantic-input');
+  const thresholdSlider = blockEl.querySelector('.block-threshold-slider');
+  const thresholdValue = blockEl.querySelector('.threshold-value');
+
   if (semanticInput) {
     let debounceTimer;
+
+    const updateSemantic = () => {
+      const query = semanticInput.value || '';
+      const threshold = parseInt(thresholdSlider?.value || 30);
+      updateBlockValue(block.id, { query, threshold });
+    };
+
     semanticInput.addEventListener('input', (e) => {
       clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
-        updateBlockValue(block.id, e.target.value || null);
-      }, 500);
+      debounceTimer = setTimeout(updateSemantic, 500);
     });
     semanticInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
+        e.preventDefault();
         clearTimeout(debounceTimer);
-        updateBlockValue(block.id, e.target.value || null);
+        updateSemantic();
       }
     });
+
+    if (thresholdSlider) {
+      thresholdSlider.addEventListener('input', () => {
+        if (thresholdValue) thresholdValue.textContent = thresholdSlider.value + '%';
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(updateSemantic, 300);
+      });
+    }
   }
 
   const venueSelect = blockEl.querySelector('.block-venue-select');
@@ -436,21 +463,37 @@ function applyIdeaNearbyFilter(papers, value) {
   });
 }
 
-async function applySemanticFilter(papers, query) {
-  if (!query || query.length < 3) return papers;
+async function applySemanticFilter(papers, value) {
+  const query = value?.query || '';
+  const threshold = (value?.threshold || 30) / 100;  // Convert to 0-1 range
+
+  console.log('applySemanticFilter called:', query, 'threshold:', threshold, 'papers:', papers.length);
+  const blockEl = document.querySelector(`.filter-block[data-block-id="${filterBlocks.find(b => b.type === 'semantic')?.id}"]`);
+
+  if (!query || query.length < 2) {
+    // Show hint message
+    if (blockEl) {
+      const hint = blockEl.querySelector('.semantic-hint');
+      if (hint) hint.textContent = query ? '2글자 이상 입력하세요' : '';
+    }
+    return papers;
+  }
+
+  // Clear hint
+  if (blockEl) {
+    const hint = blockEl.querySelector('.semantic-hint');
+    if (hint) hint.textContent = '';
+  }
 
   // Mark block as loading
-  const blockEl = document.querySelector(`.filter-block[data-block-id="${filterBlocks.find(b => b.type === 'semantic')?.id}"]`);
   if (blockEl) blockEl.classList.add('loading');
 
   try {
-    const response = await fetch(`${API_BASE}/search/semantic`, {
-      method: 'POST',
+    const response = await fetch(`${API_BASE}/semantic-search?q=${encodeURIComponent(query)}&top_k=200`, {
+      method: 'GET',
       headers: {
-        'Content-Type': 'application/json',
         'X-API-Key': getApiKey()
-      },
-      body: JSON.stringify({ query, top_k: 100 })
+      }
     });
 
     if (!response.ok) {
@@ -458,13 +501,18 @@ async function applySemanticFilter(papers, query) {
       return papers;
     }
 
-    const results = await response.json();
-    const matchingIds = new Set(results.map(r => r.id));
+    const data = await response.json();
+    const results = data.results || [];
+    console.log('Semantic search results:', results.length);
 
-    // Filter papers and sort by similarity
-    const simMap = new Map(results.map(r => [r.id, r.similarity]));
+    // Filter by threshold and match with current papers
+    const paperIds = new Set(papers.map(p => p.id));
+    const filtered = results.filter(r => r.similarity >= threshold && paperIds.has(r.id));
+
+    // Build similarity map and filter papers
+    const simMap = new Map(filtered.map(r => [r.id, r.similarity]));
     return papers
-      .filter(p => matchingIds.has(p.id))
+      .filter(p => simMap.has(p.id))
       .sort((a, b) => (simMap.get(b.id) || 0) - (simMap.get(a.id) || 0));
 
   } catch (e) {
