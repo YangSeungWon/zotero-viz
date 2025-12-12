@@ -56,9 +56,9 @@ function renderListView(papers) {
     // Get similarity score if available
     let simScore = '';
     if (hasSimScores && semanticSearchResults) {
-      const result = semanticSearchResults.find(r => r.id === paper.id);
-      if (result) {
-        simScore = `<span class="list-item-sim">${(result.similarity * 100).toFixed(1)}%</span>`;
+      const similarity = semanticSearchResults.get(paper.id);
+      if (similarity !== undefined) {
+        simScore = `<span class="list-item-sim">${(similarity * 100).toFixed(1)}%</span>`;
       }
     }
 
@@ -223,10 +223,8 @@ function sortPapersForList(papers, sortBy) {
   switch (sortBy) {
     case 'similarity':
       if (semanticSearchMode && semanticSearchResults) {
-        // Create a map of paper id to similarity
-        const simMap = new Map();
-        semanticSearchResults.forEach(r => simMap.set(r.id, r.similarity));
-        sorted.sort((a, b) => (simMap.get(b.id) || 0) - (simMap.get(a.id) || 0));
+        // semanticSearchResults is already a Map of id -> similarity
+        sorted.sort((a, b) => (semanticSearchResults.get(b.id) || 0) - (semanticSearchResults.get(a.id) || 0));
       } else {
         // Default to year desc if no similarity scores
         sorted.sort((a, b) => {

@@ -515,6 +515,12 @@ function initFilterHandlers() {
     const results = await performSemanticSearch(query);
     if (results) {
       semanticSearchResults = new Map(results.map(r => [r.id, r.similarity]));
+      // Auto-switch to similarity sort when semantic search has results
+      if (typeof listSortBy !== 'undefined') {
+        listSortBy = 'similarity';
+        const sortSelect = document.getElementById('listSortBy');
+        if (sortSelect) sortSelect.value = 'similarity';
+      }
       applyFilters();
     }
   }, SEMANTIC_SEARCH_DEBOUNCE);
@@ -548,6 +554,12 @@ function initFilterHandlers() {
         debouncedSemanticSearch();
       } else {
         semanticSearchResults = null;
+        // Revert to year-desc when turning off semantic search
+        if (typeof listSortBy !== 'undefined' && listSortBy === 'similarity') {
+          listSortBy = 'year-desc';
+          const sortSelect = document.getElementById('listSortBy');
+          if (sortSelect) sortSelect.value = 'year-desc';
+        }
         applyFilters();
       }
     }
