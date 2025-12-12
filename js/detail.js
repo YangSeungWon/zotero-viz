@@ -92,10 +92,19 @@ function getPaperKeyFromUrl() {
   return params.get('paper');  // returns zotero_key string or null
 }
 
-function copyPaperLink(zoteroKey) {
-  const url = getPaperUrl(zoteroKey);
-  navigator.clipboard.writeText(url).then(() => {
-    // Show brief feedback
+function copyPaperCitation(item) {
+  const url = getPaperUrl(item.zotero_key);
+  const authors = item.authors || 'Unknown';
+  const year = item.year || 'N/A';
+  const title = item.title || 'Untitled';
+  const venue = item.venue || '';
+
+  // Format: Authors (Year). Title. Venue. URL
+  let citation = `${authors} (${year}). ${title}.`;
+  if (venue) citation += ` ${venue}.`;
+  citation += `\n${url}`;
+
+  navigator.clipboard.writeText(citation).then(() => {
     const btn = document.querySelector('.copy-link-btn');
     if (btn) {
       const originalText = btn.textContent;
@@ -345,13 +354,24 @@ function attachPaperListClickHandlers(containerSelector, onPaperClick) {
 function renderLinksHtml(item, includeCopyLink = true) {
   let html = '';
   if (includeCopyLink) {
-    html += `<button class="copy-link-btn" onclick="copyPaperLink('${item.zotero_key}')">Copy Link</button>`;
+    html += `<button class="copy-link-btn">Copy Citation</button>`;
   }
   if (item.zotero_key) html += `<a href="${getZoteroUrl(item.zotero_key)}" class="zotero-link">Zotero</a>`;
   if (item.pdf_key) html += `<a href="${getZoteroPdfUrl(item.pdf_key)}" class="pdf-link">PDF</a>`;
   if (item.url) html += `<a href="${item.url}" target="_blank">URL</a>`;
   if (item.doi) html += `<a href="https://doi.org/${item.doi}" target="_blank">DOI</a>`;
   return html;
+}
+
+// Setup copy citation button click handler
+function setupCopyCitationButton(item, containerId = 'detailLinks') {
+  const container = document.getElementById(containerId);
+  const btn = container?.querySelector('.copy-link-btn');
+  if (btn) {
+    const newBtn = btn.cloneNode(true);
+    btn.parentNode.replaceChild(newBtn, btn);
+    newBtn.addEventListener('click', () => copyPaperCitation(item));
+  }
 }
 
 function setupDetailIdeaDropdown(item) {
@@ -725,6 +745,7 @@ function showDetail(item) {
 
   // Links
   document.getElementById('detailLinks').innerHTML = renderLinksHtml(item);
+  setupCopyCitationButton(item);
   updateUrlWithPaper(item.zotero_key);
 
   // Abstract & Notes
@@ -799,6 +820,7 @@ function showMobileDetail(item) {
 
   // Links
   document.getElementById('mobileDetailLinks').innerHTML = renderLinksHtml(item);
+  setupCopyCitationButton(item, 'mobileDetailLinks');
   updateUrlWithPaper(item.zotero_key);
 
   // Abstract & Notes
