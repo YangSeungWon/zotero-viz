@@ -619,6 +619,10 @@ function showHoverPreview(item) {
   const panel = document.getElementById('detailPanel');
   panel.classList.add('active');
 
+  // Scroll to top
+  const paperSection = document.getElementById('paperDetailSection');
+  if (paperSection) paperSection.scrollTop = 0;
+
   // 닫기 버튼, 액션 버튼들 숨기기 (호버 미리보기에서는)
   document.getElementById('closeDetail').style.display = 'none';
   const hoverDetailActions = document.getElementById('detailActions');
@@ -692,6 +696,10 @@ function showDetail(item) {
   panel.classList.add('active');
   const savedWidth = localStorage.getItem('detailPanelWidth');
   if (savedWidth) panel.style.width = savedWidth;
+
+  // Scroll to top
+  const paperSection = document.getElementById('paperDetailSection');
+  if (paperSection) paperSection.scrollTop = 0;
 
   document.getElementById('closeDetail').style.display = 'block';
 
