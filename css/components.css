@@ -293,9 +293,14 @@ input[type="checkbox"] {
   padding: 2px 0;
 }
 
-/* Hide Plotly tooltip (using side panel instead) */
+/* Hide Plotly tooltip by default (using side panel instead) */
+/* Show tooltip when paper is selected (for browsing connected papers) */
 .hoverlayer {
-  display: none !important;
+  display: none;
+}
+
+body.paper-selected .hoverlayer {
+  display: block;
 }
 
 /* Filter status in default panel */

@@ -66,10 +66,10 @@
   line-height: 1.4;
 }
 
-/* Detail actions - same style as list view */
+/* Detail actions - vertical layout in side panel */
 .detail-actions {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   gap: 2px;
   flex-shrink: 0;
 }

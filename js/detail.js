@@ -456,6 +456,7 @@ function setupDetailIdeaDropdown(item) {
 function clearSelection() {
   selectedPaper = null;
   connectedPapers = new Set();
+  document.body.classList.remove('paper-selected');
   updateUrlWithPaper(null);  // Clear paper from URL
   renderCurrentView();
   showDefaultPanel();
@@ -668,6 +669,7 @@ function showDetail(item) {
 
   selectedPaper = item;
   connectedPapers = new Set();
+  document.body.classList.add('paper-selected');
   const { references, citedBy } = buildCitationLists(item);
   renderCurrentView();
 
@@ -756,6 +758,7 @@ function findSimilarPapers(target, papers, n = 5) {
 function showMobileDetail(item) {
   selectedPaper = item;
   connectedPapers = new Set();
+  document.body.classList.add('paper-selected');
   const { references, citedBy } = buildCitationLists(item);
   renderCurrentView();
 

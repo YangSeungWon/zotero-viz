@@ -266,7 +266,12 @@ function render(filteredPapers) {
       tickfont: { color: colors.text }
     },
     showlegend: false,
-    hovermode: 'closest'
+    hovermode: 'closest',
+    hoverlabel: {
+      bgcolor: isLight ? 'rgba(255, 255, 255, 0.95)' : 'rgba(22, 27, 34, 0.95)',
+      bordercolor: 'rgba(88, 166, 255, 0.5)',
+      font: { color: isLight ? '#1f2328' : '#c9d1d9', size: 12 }
+    }
   };
 
   const config = {
@@ -371,6 +376,13 @@ function render(filteredPapers) {
     }
   }
 
+  // Hover line traces (empty, will be filled on hover) - before fg so lines are below nodes
+  const hoverRefTrace = { x: [], y: [], mode: 'lines', type: 'scatter', line: { color: 'rgba(88, 166, 255, 0.6)', width: 2 }, hoverinfo: 'none', showlegend: false };
+  const hoverCitedByTrace = { x: [], y: [], mode: 'lines', type: 'scatter', line: { color: 'rgba(249, 115, 22, 0.6)', width: 2 }, hoverinfo: 'none', showlegend: false };
+  traces.push(hoverRefTrace, hoverCitedByTrace);
+  const hoverRefTraceIdx = traces.length - 2;
+  const hoverCitedByTraceIdx = traces.length - 1;
+
   // Glow and foreground (highlighted) papers on top
   if (glowItems.length > 0) traces.push(glowTrace);
   traces.push(fgPaperTrace, fgAppTrace);
@@ -439,13 +451,9 @@ function render(filteredPapers) {
       });
     }
 
-    // 호버용 빈 트레이스 2개 미리 추가 (refs, citedBy)
-    Plotly.addTraces(plotDiv, [
-      { x: [], y: [], mode: 'lines', type: 'scatter', line: { color: 'rgba(88, 166, 255, 0.6)', width: 2 }, hoverinfo: 'none', showlegend: false },
-      { x: [], y: [], mode: 'lines', type: 'scatter', line: { color: 'rgba(249, 115, 22, 0.6)', width: 2 }, hoverinfo: 'none', showlegend: false }
-    ]);
-    const refTraceIdx = plotDiv.data.length - 2;
-    const citedByTraceIdx = plotDiv.data.length - 1;
+    // 호버용 트레이스 인덱스 (이미 traces 배열에 추가됨)
+    const refTraceIdx = hoverRefTraceIdx;
+    const citedByTraceIdx = hoverCitedByTraceIdx;
 
     plotDiv.on('plotly_hover', function(data) {
       if (!data.points || !data.points[0] || !data.points[0].customdata) return;
