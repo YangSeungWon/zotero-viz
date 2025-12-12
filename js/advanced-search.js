@@ -220,12 +220,12 @@ function getBlockContentHtml(block) {
       const ideaOptions2 = (typeof allIdeas !== 'undefined' ? allIdeas : [])
         .map(idea => `<option value="${idea.zotero_key}" ${block.value?.ideaKey === idea.zotero_key ? 'selected' : ''}>${idea.title}</option>`)
         .join('');
-      const distance = block.value?.distance || 50;
+      const distance = block.value?.distance || 15;
       return `
         <select class="block-idea-select""><option value="">Select idea...</option>${ideaOptions2}</select>
         <div style="margin-top: 8px;">
-          <label style="font-size: 11px; color: var(--text-muted);">Distance: <span class="distance-value">${distance}</span></label>
-          <input type="range" class="block-distance-slider" min="10" max="200" value="${distance}" style="width: 100%;">
+          <label style="font-size: 11px; color: var(--text-muted);">Radius: <span class="distance-value">${distance}</span>%</label>
+          <input type="range" class="block-distance-slider" min="5" max="50" value="${distance}" style="width: 100%;">
         </div>
       `;
 
@@ -332,17 +332,26 @@ function setupBlockContentListeners(blockEl, block) {
   if (ideaSelect && block.type === 'idea-nearby') {
     const distanceSlider = blockEl.querySelector('.block-distance-slider');
     const distanceValue = blockEl.querySelector('.distance-value');
+    let sliderDebounce = null;
 
-    const updateIdeaNearby = () => {
+    const updateIdeaNearby = (immediate = false) => {
       const ideaKey = ideaSelect.value || null;
-      const distance = parseInt(distanceSlider?.value || 50);
+      const distance = parseInt(distanceSlider?.value || 15);
       if (distanceValue) distanceValue.textContent = distance;
-      updateBlockValue(block.id, ideaKey ? { ideaKey, distance } : null);
+
+      if (immediate) {
+        updateBlockValue(block.id, ideaKey ? { ideaKey, distance } : null);
+      } else {
+        clearTimeout(sliderDebounce);
+        sliderDebounce = setTimeout(() => {
+          updateBlockValue(block.id, ideaKey ? { ideaKey, distance } : null);
+        }, 150);
+      }
     };
 
-    ideaSelect.addEventListener('change', updateIdeaNearby);
+    ideaSelect.addEventListener('change', () => updateIdeaNearby(true));
     if (distanceSlider) {
-      distanceSlider.addEventListener('input', updateIdeaNearby);
+      distanceSlider.addEventListener('input', () => updateIdeaNearby(false));
     }
   }
 }
@@ -355,10 +364,12 @@ async function recalculatePipeline() {
   let papers = allPapers.filter(p => p.has_notes);
 
   for (const block of filterBlocks) {
-    // Show loading state for async blocks
-    if (block.type === 'semantic') {
-      const blockEl = document.querySelector(`.filter-block[data-block-id="${block.id}"]`);
+    const blockEl = document.querySelector(`.filter-block[data-block-id="${block.id}"]`);
+
+    // Show loading state for blocks that may take time
+    if (block.type === 'semantic' || block.type === 'idea-nearby') {
       if (blockEl) {
+        blockEl.classList.add('loading');
         blockEl.querySelector('.block-result-count').textContent = '...';
       }
     }
@@ -366,9 +377,9 @@ async function recalculatePipeline() {
     papers = await applyBlockFilter(papers, block);
     block.resultCount = papers.length;
 
-    // Update count immediately after each block
-    const blockEl = document.querySelector(`.filter-block[data-block-id="${block.id}"]`);
+    // Update count and remove loading state
     if (blockEl) {
+      blockEl.classList.remove('loading');
       blockEl.querySelector('.block-result-count').textContent = block.resultCount;
     }
   }
@@ -447,7 +458,16 @@ function applyIdeaNearbyFilter(papers, value) {
 
   if (connectedPapers.length === 0) return [];
 
-  const maxDistance = value.distance || 50;
+  // Calculate map diagonal for percentage-based distance
+  const xMin = Math.min(...allPapers.map(p => p.x));
+  const xMax = Math.max(...allPapers.map(p => p.x));
+  const yMin = Math.min(...allPapers.map(p => p.y));
+  const yMax = Math.max(...allPapers.map(p => p.y));
+  const mapDiagonal = Math.sqrt(Math.pow(xMax - xMin, 2) + Math.pow(yMax - yMin, 2));
+
+  // Slider is percentage (5-50%), convert to actual distance
+  const radiusPercent = value.distance || 15;
+  const maxDistance = (radiusPercent / 100) * mapDiagonal;
 
   // Filter papers that are either connected OR within distance of any connected paper
   return papers.filter(p => {
