@@ -394,6 +394,11 @@ function applyFilters() {
   updateFilterChips();
   showFilterStatus('done');
 
+  // Update default panel if no paper selected
+  if (selectedPaper === null && typeof showDefaultPanel === 'function') {
+    showDefaultPanel();
+  }
+
   // 검색 결과 없음 메시지
   showNoResultsMessage(currentFiltered.length === 0 && allPapers.length > 0);
 }

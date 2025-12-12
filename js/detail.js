@@ -341,16 +341,33 @@ function showDefaultPanel() {
   const savedWidth = localStorage.getItem('detailPanelWidth');
   if (savedWidth) panel.style.width = savedWidth;
 
-  // 닫기 버튼 숨기기
+  // 닫기 버튼, 북마크 버튼 숨기기
   document.getElementById('closeDetail').style.display = 'none';
+  document.getElementById('bookmarkBtn').style.display = 'none';
 
   // 통계 계산
   const papers = currentFiltered.length > 0 ? currentFiltered : allPapers;
-  const totalPapers = papers.filter(p => p.is_paper).length;
-  const totalApps = papers.filter(p => !p.is_paper).length;
-  const yearRange = papers.length > 0
+  const isFiltered = currentFiltered.length > 0 && currentFiltered.length < allPapers.length;
+
+  // Filtered counts
+  const filteredPapers = papers.filter(p => p.is_paper).length;
+  const filteredApps = papers.filter(p => !p.is_paper).length;
+  const filteredYearRange = papers.length > 0
     ? `${Math.min(...papers.map(p => p.year).filter(Boolean))} - ${Math.max(...papers.map(p => p.year).filter(Boolean))}`
     : 'N/A';
+
+  // Total counts (from allPapers)
+  const allPapersCount = allPapers.filter(p => p.is_paper).length;
+  const allAppsCount = allPapers.filter(p => !p.is_paper).length;
+  const allYearRange = allPapers.length > 0
+    ? `${Math.min(...allPapers.map(p => p.year).filter(Boolean))} - ${Math.max(...allPapers.map(p => p.year).filter(Boolean))}`
+    : 'N/A';
+
+  // Citations between filtered papers
+  const filteredIds = new Set(papers.map(p => p.id));
+  const filteredCitations = citationLinks.filter(
+    link => filteredIds.has(link.source) && filteredIds.has(link.target)
+  ).length;
 
   // 클러스터별 통계
   const clusterStats = {};
@@ -366,13 +383,51 @@ function showDefaultPanel() {
     .map(([c, s]) => `<div class="stat-row"><span style="color: ${CLUSTER_COLORS[c % CLUSTER_COLORS.length]}">●</span> ${s.label || 'Cluster ' + c}: ${s.count}</div>`)
     .join('');
 
+  // Check active filters - build chips with icons like header
+  const activeFilterChips = [];
+
+  const searchFilter = document.getElementById('searchFilter')?.value?.trim();
+  const yearMin = parseInt(document.getElementById('yearMin')?.value) || 0;
+  const yearMax = parseInt(document.getElementById('yearMax')?.value) || 9999;
+  const clusterFilter = document.getElementById('clusterFilter')?.value;
+  const minVenue = parseInt(document.getElementById('minVenue')?.value) || 0;
+  const papersOnly = document.getElementById('papersOnly')?.checked;
+  const bookmarkedOnly = document.getElementById('bookmarkedOnly')?.checked;
+  const tagFilter = document.getElementById('tagFilter')?.value;
+
+  if (searchFilter) {
+    const displayText = searchFilter.length > 15 ? searchFilter.substring(0, 15) + '...' : searchFilter;
+    const iconName = typeof semanticSearchMode !== 'undefined' && semanticSearchMode ? 'brain' : 'search';
+    activeFilterChips.push(`<span class="filter-chip search"><i data-lucide="${iconName}"></i> "${displayText}"</span>`);
+  }
+  if (yearMin > 1900 || yearMax < 2100) {
+    activeFilterChips.push(`<span class="filter-chip year"><i data-lucide="calendar"></i> ${yearMin}-${yearMax}</span>`);
+  }
+  if (typeof highlightCluster !== 'undefined' && highlightCluster !== null) {
+    const label = typeof clusterLabels !== 'undefined' && clusterLabels[highlightCluster] ? clusterLabels[highlightCluster] : `Cluster ${highlightCluster}`;
+    activeFilterChips.push(`<span class="filter-chip cluster"><i data-lucide="map-pin"></i> ${label}</span>`);
+  }
+  if (tagFilter) {
+    activeFilterChips.push(`<span class="filter-chip tag"><i data-lucide="tag"></i> ${tagFilter}</span>`);
+  }
+  if (bookmarkedOnly) {
+    activeFilterChips.push(`<span class="filter-chip"><i data-lucide="star"></i> Bookmarked</span>`);
+  }
+
+  const filterStatusHtml = activeFilterChips.length > 0 ? `
+    <div class="filter-status-box">
+      <div class="active-filters">${activeFilterChips.join('')}</div>
+    </div>
+  ` : '';
+
   document.getElementById('detailTitle').textContent = 'Paper Map';
   document.getElementById('detailMeta').innerHTML = `
+    ${filterStatusHtml}
     <div class="default-stats">
-      <div class="stat-row"><strong><i data-lucide="file-text"></i> Papers:</strong> ${totalPapers}</div>
-      <div class="stat-row"><strong><i data-lucide="gem"></i> Apps:</strong> ${totalApps}</div>
-      <div class="stat-row"><strong><i data-lucide="calendar"></i> Years:</strong> ${yearRange}</div>
-      <div class="stat-row"><strong><i data-lucide="link"></i> Citations:</strong> ${citationLinks.length}</div>
+      <div class="stat-row"><strong><i data-lucide="file-text"></i> Papers:</strong> ${filteredPapers}${isFiltered ? ` <span class="stat-total">/ ${allPapersCount}</span>` : ''}</div>
+      <div class="stat-row"><strong><i data-lucide="gem"></i> Apps:</strong> ${filteredApps}${isFiltered ? ` <span class="stat-total">/ ${allAppsCount}</span>` : ''}</div>
+      <div class="stat-row"><strong><i data-lucide="calendar"></i> Years:</strong> ${filteredYearRange}${isFiltered && filteredYearRange !== allYearRange ? ` <span class="stat-total">/ ${allYearRange}</span>` : ''}</div>
+      <div class="stat-row"><strong><i data-lucide="link"></i> Citations:</strong> ${filteredCitations}${isFiltered ? ` <span class="stat-total">/ ${citationLinks.length}</span>` : ''}</div>
     </div>
   `;
   if (typeof lucide !== 'undefined') {
@@ -408,10 +463,11 @@ function showHoverPreview(item) {
   const panel = document.getElementById('detailPanel');
   panel.classList.add('active');
 
-  // 닫기 버튼 숨기기 (호버 미리보기에서는)
+  // 닫기 버튼, 북마크 버튼 숨기기 (호버 미리보기에서는)
   document.getElementById('closeDetail').style.display = 'none';
+  document.getElementById('bookmarkBtn').style.display = 'none';
 
-  document.getElementById('detailTitle').innerHTML = `<span style="opacity: 0.6; font-size: 12px;">Preview</span><br>${item.title || 'Untitled'}`;
+  document.getElementById('detailTitle').textContent = item.title || 'Untitled';
 
   const typeClass = item.is_paper ? 'paper' : 'app';
   const typeLabel = item.is_paper ? 'Paper' : 'App/Service';
@@ -432,10 +488,8 @@ function showHoverPreview(item) {
     ${item.authors ? `<br><span><strong>Authors:</strong> ${item.authors.substring(0, 80)}${item.authors.length > 80 ? '...' : ''}</span>` : ''}
   `;
 
-  let linksHtml = '';
-  if (item.url) linksHtml += `<a href="${item.url}" target="_blank">Open URL</a>`;
-  if (item.doi) linksHtml += `<a href="https://doi.org/${item.doi}" target="_blank">DOI</a>`;
-  document.getElementById('detailLinks').innerHTML = linksHtml;
+  // Hide links in preview
+  document.getElementById('detailLinks').innerHTML = '';
 
   const abstract = item.abstract || 'No abstract available.';
   document.getElementById('detailAbstract').textContent =
@@ -494,6 +548,7 @@ function showDetail(item) {
   document.getElementById('detailTitle').textContent = item.title || 'Untitled';
 
   const bookmarkBtn = document.getElementById('bookmarkBtn');
+  bookmarkBtn.style.display = '';  // Show bookmark button
   bookmarkBtn.innerHTML = `<i data-lucide="star" ${isBookmarked ? 'class="filled"' : ''}></i>`;
   bookmarkBtn.classList.toggle('active', isBookmarked);
   if (typeof lucide !== 'undefined') lucide.createIcons();
