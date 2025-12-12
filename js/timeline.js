@@ -161,7 +161,12 @@ function renderTimeline(filteredPapers) {
       tickfont: { color: colors.text, size: 10 }
     },
     showlegend: false,
-    hovermode: 'closest'
+    hovermode: 'closest',
+    hoverlabel: {
+      bgcolor: isLight ? 'rgba(255, 255, 255, 0.95)' : 'rgba(22, 27, 34, 0.95)',
+      bordercolor: 'rgba(88, 166, 255, 0.5)',
+      font: { color: isLight ? '#1f2328' : '#c9d1d9', size: 12 }
+    }
   };
 
   const config = {
