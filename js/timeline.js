@@ -423,10 +423,10 @@ function switchView(view) {
   const miniTimeline = document.getElementById('miniTimeline');
   const isMobileView = window.innerWidth <= MOBILE_BREAKPOINT;
 
-  // Update mobile body classes
-  document.body.classList.remove('mobile-view-map', 'mobile-view-list');
+  // On mobile, always use list view (CSS handles this)
   if (isMobileView) {
-    document.body.classList.add(view === 'list' ? 'mobile-view-list' : 'mobile-view-map');
+    renderListView(currentFiltered);
+    return;
   }
 
   // Hide all views first

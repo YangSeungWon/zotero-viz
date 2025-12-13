@@ -1,8 +1,11 @@
 /* ===========================================
-   Mobile UI Functions
+   Mobile UI Functions (Simplified - List only)
    =========================================== */
 
 const isMobile = () => window.innerWidth <= MOBILE_BREAKPOINT;
+
+// Mobile semantic search state
+let mobileSemanticEnabled = false;
 
 // Hamburger Menu
 function openMobileMenu() {
@@ -35,8 +38,8 @@ function closeBottomSheet() {
   if (isMobile()) {
     selectedPaper = null;
     connectedPapers = new Set();
-    updateUrlWithPaper(null);  // Clear paper from URL
-    render(currentFiltered);
+    updateUrlWithPaper(null);
+    renderList(currentFiltered);
   }
 }
 
@@ -91,24 +94,41 @@ function updateMobileClusterChips() {
   });
 }
 
-// Sync controls
+// Sync controls (simplified)
 function syncMobileControls() {
-  document.getElementById('mobileMinYear').value = document.getElementById('minYear').value;
-  document.getElementById('mobileMinVenue').value = document.getElementById('minVenue').value;
-  document.getElementById('mobilePapersOnly').checked = document.getElementById('papersOnly').checked;
-  document.getElementById('mobileTagFilter').value = document.getElementById('tagFilter').value;
-  document.getElementById('mobileSearchFilter').value = document.getElementById('searchFilter').value;
-  document.getElementById('mobileShowCitations').checked = document.getElementById('showCitations').checked;
+  const tagFilter = document.getElementById('mobileTagFilter');
+  const bookmarkedOnly = document.getElementById('mobileBookmarkedOnly');
+  const sortBy = document.getElementById('mobileSortBy');
+  const headerSearch = document.getElementById('mobileHeaderSearch');
+
+  if (tagFilter) tagFilter.value = document.getElementById('tagFilter')?.value || '';
+  if (bookmarkedOnly) bookmarkedOnly.checked = document.getElementById('bookmarkedOnly')?.checked || false;
+  if (sortBy) sortBy.value = document.getElementById('listSortBy')?.value || 'year-desc';
+  if (headerSearch) headerSearch.value = document.getElementById('searchFilter')?.value || '';
 }
 
 function syncDesktopControls() {
-  document.getElementById('minYear').value = document.getElementById('mobileMinYear').value;
-  document.getElementById('minVenue').value = document.getElementById('mobileMinVenue').value;
-  document.getElementById('papersOnly').checked = document.getElementById('mobilePapersOnly').checked;
-  document.getElementById('tagFilter').value = document.getElementById('mobileTagFilter').value;
-  document.getElementById('searchFilter').value = document.getElementById('mobileSearchFilter').value;
-  document.getElementById('showCitations').checked = document.getElementById('mobileShowCitations').checked;
-  showCitations = document.getElementById('mobileShowCitations').checked;
+  const mobileTagFilter = document.getElementById('mobileTagFilter');
+  const mobileBookmarkedOnly = document.getElementById('mobileBookmarkedOnly');
+  const mobileSortBy = document.getElementById('mobileSortBy');
+  const mobileHeaderSearch = document.getElementById('mobileHeaderSearch');
+
+  if (mobileTagFilter) {
+    const tagFilter = document.getElementById('tagFilter');
+    if (tagFilter) tagFilter.value = mobileTagFilter.value;
+  }
+  if (mobileBookmarkedOnly) {
+    const bookmarkedOnly = document.getElementById('bookmarkedOnly');
+    if (bookmarkedOnly) bookmarkedOnly.checked = mobileBookmarkedOnly.checked;
+  }
+  if (mobileSortBy) {
+    const listSortBy = document.getElementById('listSortBy');
+    if (listSortBy) listSortBy.value = mobileSortBy.value;
+  }
+  if (mobileHeaderSearch) {
+    const searchFilter = document.getElementById('searchFilter');
+    if (searchFilter) searchFilter.value = mobileHeaderSearch.value;
+  }
 }
 
 // Initialize mobile event handlers
@@ -178,75 +198,95 @@ function initMobileHandlers() {
     }
   });
 
-  // Mobile control handlers
-  document.getElementById('mobileMinYear').addEventListener('change', () => {
-    syncDesktopControls();
-    applyFilters();
-  });
-  document.getElementById('mobileMinVenue').addEventListener('change', () => {
-    syncDesktopControls();
-    applyFilters();
-  });
-  document.getElementById('mobilePapersOnly').addEventListener('change', () => {
-    syncDesktopControls();
-    applyFilters();
-  });
-  document.getElementById('mobileTagFilter').addEventListener('change', () => {
-    syncDesktopControls();
-    applyFilters();
-  });
-  document.getElementById('mobileSearchFilter').addEventListener('input', debounce(() => {
-    syncDesktopControls();
-    applyFilters();
-  }, DEBOUNCE_DELAY));
-  document.getElementById('mobileShowCitations').addEventListener('change', () => {
-    syncDesktopControls();
-    render(currentFiltered);
-  });
-  document.getElementById('mobileResetFilter').addEventListener('click', () => {
-    document.getElementById('resetFilter').click();
-    syncMobileControls();
-    closeMobileMenu();
-  });
-  document.getElementById('mobileShowStats').addEventListener('click', () => {
-    document.getElementById('showGlobalStats').click();
-    closeMobileMenu();
-  });
-  document.getElementById('mobileCopyExport').addEventListener('click', () => {
-    document.getElementById('copyFiltered').click();
-    closeMobileMenu();
-  });
-  document.getElementById('mobileFullSync').addEventListener('click', () => {
-    document.getElementById('fullSync').click();
-    closeMobileMenu();
-  });
-  document.getElementById('mobileBatchTags').addEventListener('click', () => {
-    document.getElementById('batchTagManager').click();
-    closeMobileMenu();
-  });
-  document.getElementById('mobileThemeToggle').addEventListener('click', () => {
-    document.getElementById('themeToggle').click();
-    document.getElementById('mobileThemeToggle').textContent =
-      document.getElementById('themeToggle').textContent;
-  });
+  // Mobile header search
+  const mobileHeaderSearch = document.getElementById('mobileHeaderSearch');
+  if (mobileHeaderSearch) {
+    mobileHeaderSearch.addEventListener('input', debounce(() => {
+      syncDesktopControls();
+      if (mobileSemanticEnabled && mobileHeaderSearch.value.trim()) {
+        // Trigger semantic search
+        const semanticToggle = document.getElementById('semanticToggle');
+        if (semanticToggle && !semanticToggle.classList.contains('active')) {
+          semanticToggle.click();
+        }
+        document.getElementById('searchFilter').value = mobileHeaderSearch.value;
+        applyFilters();
+      } else {
+        applyFilters();
+      }
+    }, DEBOUNCE_DELAY));
+  }
+
+  // Mobile semantic toggle
+  const mobileSemanticToggle = document.getElementById('mobileSemanticToggle');
+  if (mobileSemanticToggle) {
+    mobileSemanticToggle.addEventListener('click', () => {
+      mobileSemanticEnabled = !mobileSemanticEnabled;
+      mobileSemanticToggle.classList.toggle('active', mobileSemanticEnabled);
+
+      // Sync with desktop semantic toggle
+      const desktopToggle = document.getElementById('semanticToggle');
+      if (desktopToggle) {
+        if (mobileSemanticEnabled !== desktopToggle.classList.contains('active')) {
+          desktopToggle.click();
+        }
+      }
+
+      // Update placeholder
+      mobileHeaderSearch.placeholder = mobileSemanticEnabled ? 'AI Search...' : 'Search...';
+    });
+  }
+
+  // Mobile menu control handlers
+  const mobileTagFilter = document.getElementById('mobileTagFilter');
+  if (mobileTagFilter) {
+    mobileTagFilter.addEventListener('change', () => {
+      syncDesktopControls();
+      applyFilters();
+    });
+  }
+
+  const mobileBookmarkedOnly = document.getElementById('mobileBookmarkedOnly');
+  if (mobileBookmarkedOnly) {
+    mobileBookmarkedOnly.addEventListener('change', () => {
+      syncDesktopControls();
+      applyFilters();
+    });
+  }
+
+  const mobileSortBy = document.getElementById('mobileSortBy');
+  if (mobileSortBy) {
+    mobileSortBy.addEventListener('change', () => {
+      syncDesktopControls();
+      renderList(currentFiltered);
+    });
+  }
+
+  const mobileResetFilter = document.getElementById('mobileResetFilter');
+  if (mobileResetFilter) {
+    mobileResetFilter.addEventListener('click', () => {
+      document.getElementById('resetFilter')?.click();
+      mobileHeaderSearch.value = '';
+      mobileSemanticEnabled = false;
+      mobileSemanticToggle?.classList.remove('active');
+      mobileHeaderSearch.placeholder = 'Search...';
+      syncMobileControls();
+      closeMobileMenu();
+    });
+  }
+
+  const mobileThemeToggle = document.getElementById('mobileThemeToggle');
+  if (mobileThemeToggle) {
+    mobileThemeToggle.addEventListener('click', () => {
+      document.getElementById('themeToggle')?.click();
+    });
+  }
 
   // Window resize
   window.addEventListener('resize', debounce(() => {
     if (!isMobile()) {
       closeMobileMenu();
       closeBottomSheet();
-      // Remove mobile view classes on desktop
-      document.body.classList.remove('mobile-view-map', 'mobile-view-list');
-    } else {
-      // Update mobile view classes based on current view
-      document.body.classList.remove('mobile-view-map', 'mobile-view-list');
-      document.body.classList.add(currentView === 'list' ? 'mobile-view-list' : 'mobile-view-map');
     }
-    Plotly.Plots.resize('plot');
   }, 250));
-
-  // Initialize mobile body class on page load
-  if (isMobile()) {
-    document.body.classList.add(currentView === 'list' ? 'mobile-view-list' : 'mobile-view-map');
-  }
 }

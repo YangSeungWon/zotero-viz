@@ -35,6 +35,11 @@
 
   <header>
     <h1>Zotero Explorer</h1>
+    <!-- Mobile Search Bar (visible only on mobile) -->
+    <div class="mobile-search-bar" id="mobileSearchBar">
+      <input type="text" id="mobileHeaderSearch" placeholder="Search...">
+      <button id="mobileSemanticToggle" class="semantic-toggle" title="Toggle semantic search"><i data-lucide="brain"></i></button>
+    </div>
     <div class="view-toggle" id="viewToggle">
       <button class="view-btn active" data-view="map">Map</button>
       <button class="view-btn" data-view="list">List</button>
@@ -125,28 +130,15 @@
   <!-- Mobile Menu Overlay -->
   <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
 
-  <!-- Mobile Menu -->
+  <!-- Mobile Menu (Simplified) -->
   <nav class="mobile-menu" id="mobileMenu">
     <div class="mobile-menu-header">
-      <h2>Filters</h2>
+      <h2>Settings</h2>
       <button class="theme-toggle" id="mobileThemeToggle" title="Toggle theme"><i data-lucide="moon"></i></button>
     </div>
 
     <div class="mobile-menu-section">
-      <h3>Filters</h3>
-      <div class="control-group">
-        <label>Min Year</label>
-        <input type="number" id="mobileMinYear" value="1990" min="1990" max="2025">
-      </div>
-      <div class="control-group">
-        <label>Min Venue Quality</label>
-        <select id="mobileMinVenue">
-          <option value="0">All</option>
-          <option value="3">3+</option>
-          <option value="4">4+</option>
-          <option value="5">5 only</option>
-        </select>
-      </div>
+      <h3>Filter</h3>
       <div class="control-group">
         <label>Tag</label>
         <select id="mobileTagFilter">
@@ -154,38 +146,26 @@
         </select>
       </div>
       <div class="control-group">
-        <label><input type="checkbox" id="mobilePapersOnly"> Papers only</label>
+        <label><input type="checkbox" id="mobileBookmarkedOnly"> <i data-lucide="star" style="width: 14px; height: 14px;"></i> Bookmarked only</label>
       </div>
     </div>
 
     <div class="mobile-menu-section">
-      <h3>Search</h3>
+      <h3>Sort</h3>
       <div class="control-group">
-        <input type="text" id="mobileSearchFilter" placeholder="Title, author, abstract...">
+        <select id="mobileSortBy" style="width: 100%;">
+          <option value="similarity">Similarity</option>
+          <option value="year-desc">Year (newest)</option>
+          <option value="year-asc">Year (oldest)</option>
+          <option value="title">Title</option>
+          <option value="cluster">Cluster</option>
+          <option value="citations">Citations</option>
+        </select>
       </div>
     </div>
 
     <div class="mobile-menu-section">
-      <h3>Display</h3>
-      <div class="control-group">
-        <label><input type="checkbox" id="mobileShowCitations" checked> Show citation links</label>
-      </div>
-    </div>
-
-    <div class="mobile-menu-section">
-      <h3>Export</h3>
-      <button id="mobileShowStats" style="width: 100%; background: var(--bg-tertiary); margin-bottom: 8px;"><i data-lucide="bar-chart-2"></i> Stats</button>
-      <button id="mobileCopyExport" style="width: 100%; background: var(--bg-tertiary);"><i data-lucide="file-text"></i> Papers</button>
-    </div>
-
-    <div class="mobile-menu-section">
-      <h3>Zotero</h3>
-      <button id="mobileFullSync" style="width: 100%; background: var(--bg-tertiary); margin-bottom: 8px; color: #f97316;"><i data-lucide="zap"></i> Full Sync</button>
-      <button id="mobileBatchTags" style="width: 100%; background: var(--bg-tertiary);"><i data-lucide="tag"></i> Batch Tags</button>
-    </div>
-
-    <div class="mobile-menu-section">
-      <button id="mobileResetFilter" style="width: 100%; background: var(--bg-tertiary);">Reset Filters</button>
+      <button id="mobileResetFilter" class="btn" style="width: 100%;"><i data-lucide="rotate-ccw"></i> Reset</button>
     </div>
   </nav>
 

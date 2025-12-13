@@ -2,6 +2,11 @@
    Mobile UI Components & Responsive Styles
    =========================================== */
 
+/* Mobile search bar - hidden on desktop */
+.mobile-search-bar {
+  display: none;
+}
+
 /* Hamburger Button */
 .hamburger-btn {
   display: none;
@@ -271,20 +276,17 @@
 
   header h1 {
     font-size: 15px;
+    flex-shrink: 0;
   }
 
-  /* Mobile view toggle - simplified */
+  /* Hide view toggle on mobile - List only */
   .view-toggle {
-    margin-left: 0;
-    order: 10;
-  }
-
-  .view-toggle .view-btn[data-view="timeline"] {
-    display: none;
+    display: none !important;
   }
 
   .hamburger-btn {
     display: flex;
+    order: 100;
   }
 
   .mobile-menu,
@@ -300,23 +302,73 @@
   #copyClusters,
   #copyFiltered,
   #showClassics,
-  #showNewWork {
+  #showNewWork,
+  .theme-toggle {
     display: none !important;
   }
 
+  /* Mobile search bar in header */
+  .mobile-search-bar {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    gap: 4px;
+    order: 5;
+  }
+
+  .mobile-search-bar input {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 12px;
+    font-size: 14px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+  }
+
+  .mobile-search-bar input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .mobile-search-bar input::placeholder {
+    color: var(--text-muted);
+  }
+
+  .mobile-search-bar .semantic-toggle {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-tertiary);
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .mobile-search-bar .semantic-toggle.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+
+  .mobile-search-bar .semantic-toggle svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Hide mobile legend (no map view) */
   .mobile-legend {
-    display: block;
+    display: none !important;
   }
 
   .stats {
-    font-size: 11px;
-    flex: 1;
-    text-align: right;
-  }
-
-  .theme-toggle {
-    padding: 6px 8px;
-    font-size: 12px;
+    display: none !important;
   }
 
   .main-content {
@@ -334,22 +386,20 @@
     display: flex;
   }
 
-  /* Plot container */
+  /* Hide plot container on mobile - List only */
   .plot-container {
-    flex: 1;
-    width: 100%;
-    min-height: 0;
-    display: block;
+    display: none !important;
   }
 
-  #plot {
-    width: 100%;
-    height: 100%;
+  #plot,
+  #timelinePlot,
+  .mini-timeline {
+    display: none !important;
   }
 
-  /* List view on mobile */
+  /* List view always visible on mobile */
   .list-view {
-    display: none;
+    display: flex !important;
     position: relative;
     flex: 1;
     width: 100%;
@@ -357,6 +407,10 @@
 
   .list-view .list-header {
     padding: 8px 12px;
+  }
+
+  .list-view .list-header .list-sort {
+    display: none;
   }
 
   .list-view .list-container {
@@ -378,27 +432,6 @@
 
   .list-view .list-item-meta {
     margin-left: 8px;
-  }
-
-  /* Show/hide based on active view */
-  body.mobile-view-map .plot-container {
-    display: block;
-  }
-
-  body.mobile-view-map .list-view {
-    display: none !important;
-  }
-
-  body.mobile-view-list .plot-container {
-    display: none;
-  }
-
-  body.mobile-view-list .list-view {
-    display: flex !important;
-  }
-
-  body.mobile-view-list .mobile-legend {
-    display: none;
   }
 
   .detail-panel {
