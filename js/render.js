@@ -3,6 +3,8 @@
    =========================================== */
 
 function render(filteredPapers) {
+  const renderStart = performance.now();
+
   // Map/Timeline: show all papers, highlight filtered ones
   const papers = allPapers;
   const filteredIds = new Set(filteredPapers.map(p => p.id));
@@ -378,11 +380,10 @@ function render(filteredPapers) {
   }
 
   // Hover line traces (empty, will be filled on hover) - before fg so lines are below nodes
-  const hoverRefTrace = { x: [], y: [], mode: 'lines', type: 'scatter', line: { color: 'rgba(88, 166, 255, 0.6)', width: 2 }, hoverinfo: 'none', showlegend: false };
-  const hoverCitedByTrace = { x: [], y: [], mode: 'lines', type: 'scatter', line: { color: 'rgba(249, 115, 22, 0.6)', width: 2 }, hoverinfo: 'none', showlegend: false };
+  // Use unique names to find them later reliably
+  const hoverRefTrace = { x: [], y: [], mode: 'lines', type: 'scatter', line: { color: 'rgba(88, 166, 255, 0.6)', width: 2 }, hoverinfo: 'none', showlegend: false, name: '_hoverRef' };
+  const hoverCitedByTrace = { x: [], y: [], mode: 'lines', type: 'scatter', line: { color: 'rgba(249, 115, 22, 0.6)', width: 2 }, hoverinfo: 'none', showlegend: false, name: '_hoverCitedBy' };
   traces.push(hoverRefTrace, hoverCitedByTrace);
-  const hoverRefTraceIdx = traces.length - 2;
-  const hoverCitedByTraceIdx = traces.length - 1;
 
   // Glow and foreground (highlighted) papers on top
   if (glowItems.length > 0) traces.push(glowTrace);
@@ -423,7 +424,21 @@ function render(filteredPapers) {
   }
 
   Plotly.react(plotDiv, traces, layout, config).then(function() {
-    let pointClicked = false;
+    const renderTime = performance.now() - renderStart;
+    console.log(`%c[Render] ${renderTime.toFixed(1)}ms | ${traces.length} traces | ${papers.length} papers`,
+      renderTime < 100 ? 'color: green' : renderTime < 300 ? 'color: orange' : 'color: red');
+
+    // Remove old event listeners to prevent memory leak
+    plotDiv.removeAllListeners('plotly_click');
+    plotDiv.removeAllListeners('plotly_hover');
+    plotDiv.removeAllListeners('plotly_unhover');
+    plotDiv.removeAllListeners('plotly_relayout');
+    plotDiv.removeAllListeners('plotly_doubleclick');
+
+    // Initialize click state only once (don't reset on re-render)
+    if (plotDiv._pointClicked === undefined) {
+      plotDiv._pointClicked = false;
+    }
 
     plotDiv.on('plotly_click', function(data) {
       if (data.points && data.points[0] && data.points[0].customdata) {
@@ -434,27 +449,32 @@ function render(filteredPapers) {
           return;
         }
 
-        pointClicked = true;
+        plotDiv._pointClicked = true;
         showDetail(paper);
       }
     });
 
     // 빈 공간 클릭 시 선택 해제 (plotly_click은 빈 공간에서 발생하지 않음)
+    // DOM 리스너는 한번만 추가 (중복 방지)
     const plotArea = plotDiv.querySelector('.nsewdrag');
-    if (plotArea) {
-      plotArea.addEventListener('click', function(e) {
+    if (plotArea && !plotArea._emptyClickHandler) {
+      plotArea._emptyClickHandler = function(e) {
         setTimeout(() => {
-          if (!pointClicked && selectedPaper !== null) {
+          if (!plotDiv._pointClicked && selectedPaper !== null) {
             clearSelection();
           }
-          pointClicked = false;
+          plotDiv._pointClicked = false;
         }, 10);
-      });
+      };
+      plotArea.addEventListener('click', plotArea._emptyClickHandler);
     }
 
-    // 호버용 트레이스 인덱스 (이미 traces 배열에 추가됨)
-    const refTraceIdx = hoverRefTraceIdx;
-    const citedByTraceIdx = hoverCitedByTraceIdx;
+    // 호버용 트레이스 인덱스 찾기 (이름으로 안전하게)
+    function getHoverTraceIndices() {
+      const refIdx = plotDiv.data.findIndex(t => t.name === '_hoverRef');
+      const citedByIdx = plotDiv.data.findIndex(t => t.name === '_hoverCitedBy');
+      return { refIdx, citedByIdx };
+    }
 
     plotDiv.on('plotly_hover', function(data) {
       if (!data.points || !data.points[0] || !data.points[0].customdata) return;
@@ -475,19 +495,25 @@ function render(filteredPapers) {
       if (selectedPaper !== null) return;
       if (!showCitations || citationLinks.length === 0) return;
 
+      const { refIdx, citedByIdx } = getHoverTraceIndices();
+      if (refIdx < 0 || citedByIdx < 0) return;
+
       const cached = hoverLinesCache.get(hoveredItem.id);
       if (cached) {
         Plotly.restyle(plotDiv, {
           x: [cached.refX, cached.citedByX],
           y: [cached.refY, cached.citedByY]
-        }, [refTraceIdx, citedByTraceIdx]);
+        }, [refIdx, citedByIdx]);
       } else {
-        Plotly.restyle(plotDiv, { x: [[], []], y: [[], []] }, [refTraceIdx, citedByTraceIdx]);
+        Plotly.restyle(plotDiv, { x: [[], []], y: [[], []] }, [refIdx, citedByIdx]);
       }
     });
 
     plotDiv.on('plotly_unhover', function() {
-      Plotly.restyle(plotDiv, { x: [[], []], y: [[], []] }, [refTraceIdx, citedByTraceIdx]);
+      const { refIdx, citedByIdx } = getHoverTraceIndices();
+      if (refIdx >= 0 && citedByIdx >= 0) {
+        Plotly.restyle(plotDiv, { x: [[], []], y: [[], []] }, [refIdx, citedByIdx]);
+      }
 
       // 선택된 논문 없으면 기본 패널로
       if (selectedPaper === null && typeof showDefaultPanel === 'function') {
@@ -532,7 +558,10 @@ function render(filteredPapers) {
       }
 
       if (indices.length > 0) {
-        Plotly.restyle(plotDiv, { 'marker.size': sizes }, indices);
+        const restyleStart = performance.now();
+        Plotly.restyle(plotDiv, { 'marker.size': sizes }, indices).then(() => {
+          console.log(`%c[Restyle] ${(performance.now() - restyleStart).toFixed(1)}ms`, 'color: #888');
+        });
       }
     }
 
