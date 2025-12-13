@@ -294,6 +294,7 @@ function render(filteredPapers) {
   if (bgApps.length > 0) traces.push(bgAppTrace);
 
   // 인용 관계 선 (above bg papers, below fg papers)
+  // Consolidated into 3 traces max instead of N individual traces for performance
   if (showCitations && citationLinks.length > 0) {
     const idToPos = {};
     papers.forEach(p => { idToPos[p.id] = { x: p.x, y: p.y }; });
@@ -304,75 +305,75 @@ function render(filteredPapers) {
     );
 
     if (selectedPaper !== null) {
-      const refLinks = relevantLinks.filter(link => link.source === selectedPaper.id);
-      const citedByLinks = relevantLinks.filter(link => link.target === selectedPaper.id);
-      const otherLinks = relevantLinks.filter(
-        link => link.source !== selectedPaper.id && link.target !== selectedPaper.id
-      );
+      // 3 consolidated traces: other (gray), refs (blue), citedBy (orange)
+      const otherX = [], otherY = [];
+      const refX = [], refY = [];
+      const citedByX = [], citedByY = [];
 
-      otherLinks.forEach(link => {
+      relevantLinks.forEach(link => {
         const source = idToPos[link.source];
         const target = idToPos[link.target];
-        if (source && target) {
-          traces.push({
-            x: [source.x, target.x],
-            y: [source.y, target.y],
-            mode: 'lines',
-            type: 'scatter',
-            line: { color: 'rgba(128, 128, 128, 0.1)', width: 1 },
-            hoverinfo: 'none',
-            showlegend: false
-          });
+        if (!source || !target) return;
+
+        if (link.source === selectedPaper.id) {
+          // Reference link (blue)
+          refX.push(source.x, target.x, null);
+          refY.push(source.y, target.y, null);
+        } else if (link.target === selectedPaper.id) {
+          // Cited by link (orange)
+          citedByX.push(source.x, target.x, null);
+          citedByY.push(source.y, target.y, null);
+        } else {
+          // Other link (gray, dimmed)
+          otherX.push(source.x, target.x, null);
+          otherY.push(source.y, target.y, null);
         }
       });
 
-      refLinks.forEach(link => {
-        const source = idToPos[link.source];
-        const target = idToPos[link.target];
-        if (source && target) {
-          traces.push({
-            x: [source.x, target.x],
-            y: [source.y, target.y],
-            mode: 'lines',
-            type: 'scatter',
-            line: { color: 'rgba(88, 166, 255, 0.8)', width: 2 },
-            hoverinfo: 'none',
-            showlegend: false
-          });
-        }
-      });
-
-      citedByLinks.forEach(link => {
-        const source = idToPos[link.source];
-        const target = idToPos[link.target];
-        if (source && target) {
-          traces.push({
-            x: [source.x, target.x],
-            y: [source.y, target.y],
-            mode: 'lines',
-            type: 'scatter',
-            line: { color: 'rgba(249, 115, 22, 0.8)', width: 2 },
-            hoverinfo: 'none',
-            showlegend: false
-          });
-        }
-      });
+      if (otherX.length > 0) {
+        traces.push({
+          x: otherX, y: otherY,
+          mode: 'lines', type: 'scatter',
+          line: { color: 'rgba(128, 128, 128, 0.1)', width: 1 },
+          hoverinfo: 'none', showlegend: false
+        });
+      }
+      if (refX.length > 0) {
+        traces.push({
+          x: refX, y: refY,
+          mode: 'lines', type: 'scatter',
+          line: { color: 'rgba(88, 166, 255, 0.8)', width: 2 },
+          hoverinfo: 'none', showlegend: false
+        });
+      }
+      if (citedByX.length > 0) {
+        traces.push({
+          x: citedByX, y: citedByY,
+          mode: 'lines', type: 'scatter',
+          line: { color: 'rgba(249, 115, 22, 0.8)', width: 2 },
+          hoverinfo: 'none', showlegend: false
+        });
+      }
     } else {
+      // Single consolidated trace for all links
+      const allX = [], allY = [];
       relevantLinks.forEach(link => {
         const source = idToPos[link.source];
         const target = idToPos[link.target];
         if (source && target) {
-          traces.push({
-            x: [source.x, target.x],
-            y: [source.y, target.y],
-            mode: 'lines',
-            type: 'scatter',
-            line: { color: 'rgba(128, 128, 128, 0.25)', width: 1 },
-            hoverinfo: 'none',
-            showlegend: false
-          });
+          allX.push(source.x, target.x, null);
+          allY.push(source.y, target.y, null);
         }
       });
+
+      if (allX.length > 0) {
+        traces.push({
+          x: allX, y: allY,
+          mode: 'lines', type: 'scatter',
+          line: { color: 'rgba(128, 128, 128, 0.25)', width: 1 },
+          hoverinfo: 'none', showlegend: false
+        });
+      }
     }
   }
 
@@ -421,7 +422,7 @@ function render(filteredPapers) {
     });
   }
 
-  Plotly.newPlot(plotDiv, traces, layout, config).then(function() {
+  Plotly.react(plotDiv, traces, layout, config).then(function() {
     let pointClicked = false;
 
     plotDiv.on('plotly_click', function(data) {
@@ -505,20 +506,33 @@ function render(filteredPapers) {
       const fgAppIdx = plotDiv.data.findIndex(t => t.name === 'Apps/Services');
       const glowIdx = plotDiv.data.findIndex(t => t.marker?.color === 'rgba(0, 255, 255, 0.3)');
 
+      // Combine all restyle calls into one for better performance
+      const sizes = [];
+      const indices = [];
+
       if (bgPaperIdx >= 0 && bgPapers.length > 0) {
-        Plotly.restyle(plotDiv, { 'marker.size': [bgPapers.map(p => getSize(p) * zoomScale)] }, [bgPaperIdx]);
+        sizes.push(bgPapers.map(p => getSize(p) * zoomScale));
+        indices.push(bgPaperIdx);
       }
       if (fgPaperIdx >= 0) {
-        Plotly.restyle(plotDiv, { 'marker.size': [fgPapers.map(p => getSize(p) * zoomScale)] }, [fgPaperIdx]);
+        sizes.push(fgPapers.map(p => getSize(p) * zoomScale));
+        indices.push(fgPaperIdx);
       }
       if (bgAppIdx >= 0 && bgApps.length > 0) {
-        Plotly.restyle(plotDiv, { 'marker.size': [bgApps.map(() => 14 * zoomScale)] }, [bgAppIdx]);
+        sizes.push(bgApps.map(() => 14 * zoomScale));
+        indices.push(bgAppIdx);
       }
       if (fgAppIdx >= 0) {
-        Plotly.restyle(plotDiv, { 'marker.size': [fgApps.map(() => 14 * zoomScale)] }, [fgAppIdx]);
+        sizes.push(fgApps.map(() => 14 * zoomScale));
+        indices.push(fgAppIdx);
       }
       if (glowIdx >= 0 && glowItems.length > 0) {
-        Plotly.restyle(plotDiv, { 'marker.size': [glowItems.map(p => (getSize(p) + 12) * zoomScale)] }, [glowIdx]);
+        sizes.push(glowItems.map(p => (getSize(p) + 12) * zoomScale));
+        indices.push(glowIdx);
+      }
+
+      if (indices.length > 0) {
+        Plotly.restyle(plotDiv, { 'marker.size': sizes }, indices);
       }
     }
 
