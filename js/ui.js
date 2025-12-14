@@ -838,6 +838,9 @@ function initStatsModals() {
   missingModal.addEventListener('click', (e) => {
     if (e.target === missingModal) missingModal.classList.remove('active');
   });
+
+  // External Search Modal
+  initExternalSearchModal();
 }
 
 function showGlobalStatsModal(modal, list) {
@@ -1312,4 +1315,103 @@ function showAuthorStats() {
   }
 
   document.getElementById('authorStatsModal').classList.add('active');
+}
+
+// ============================================================
+// External Search Modal (Semantic Scholar)
+// ============================================================
+function initExternalSearchModal() {
+  const modal = document.getElementById('externalSearchModal');
+  const input = document.getElementById('externalSearchQuery');
+  const searchBtn = document.getElementById('externalSearchBtn');
+  const results = document.getElementById('externalSearchResults');
+  const closeBtn = document.getElementById('closeExternalSearch');
+
+  if (!modal || !input || !searchBtn || !results) return;
+
+  // Open modal
+  document.getElementById('externalSearch')?.addEventListener('click', () => {
+    modal.classList.add('active');
+    input.focus();
+  });
+
+  // Close modal
+  closeBtn?.addEventListener('click', () => modal.classList.remove('active'));
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.classList.remove('active');
+  });
+
+  // Search on button click
+  searchBtn.addEventListener('click', performExternalSearch);
+
+  // Search on Enter key
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') performExternalSearch();
+  });
+
+  async function performExternalSearch() {
+    const query = input.value.trim();
+    if (!query) return;
+
+    results.innerHTML = '<div class="external-search-loading"><i data-lucide="loader" class="spin"></i> Searching Semantic Scholar...</div>';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    try {
+      const resp = await fetch(`/api/external-search?q=${encodeURIComponent(query)}&limit=30`);
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        throw new Error(data.error || `HTTP ${resp.status}`);
+      }
+
+      renderExternalSearchResults(data.results, data.total);
+    } catch (e) {
+      results.innerHTML = `<div class="external-search-error"><i data-lucide="alert-circle"></i> ${escapeHtml(e.message)}</div>`;
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+  }
+
+  function renderExternalSearchResults(papers, total) {
+    if (!papers || papers.length === 0) {
+      results.innerHTML = '<div class="external-search-hint"><p>No results found.</p></div>';
+      return;
+    }
+
+    const inLibraryCount = papers.filter(p => p.in_library).length;
+
+    let html = `<div class="search-results-header">
+      Found ${total?.toLocaleString() || papers.length} papers
+      ${inLibraryCount > 0 ? ` · <strong>${inLibraryCount}</strong> in your library` : ''}
+    </div>`;
+
+    html += papers.map(p => {
+      const authors = (p.authors || []).slice(0, 3).map(a => a.name).join(', ');
+      const moreAuthors = p.authors?.length > 3 ? ' et al.' : '';
+      const venue = p.venue || '';
+      const year = p.year || '';
+      const citations = p.citationCount || 0;
+      const abstract = p.abstract || '';
+
+      return `
+        <div class="search-result ${p.in_library ? 'in-library' : ''}">
+          <div class="result-header">
+            ${p.in_library ? '<span class="result-badge">In Library</span>' : ''}
+            <div class="result-title">
+              <a href="https://www.semanticscholar.org/paper/${p.paperId}" target="_blank" rel="noopener">
+                ${escapeHtml(p.title || 'Untitled')}
+              </a>
+            </div>
+          </div>
+          <div class="result-meta">
+            ${year}${year && venue ? ' · ' : ''}${escapeHtml(venue)}${(year || venue) && citations ? ' · ' : ''}${citations > 0 ? `${citations.toLocaleString()} citations` : ''}
+          </div>
+          ${authors ? `<div class="result-authors">${escapeHtml(authors)}${moreAuthors}</div>` : ''}
+          ${abstract ? `<div class="result-abstract">${escapeHtml(abstract)}</div>` : ''}
+        </div>
+      `;
+    }).join('');
+
+    results.innerHTML = html;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
 }

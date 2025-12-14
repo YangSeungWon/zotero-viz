@@ -1195,6 +1195,78 @@ def remove_paper_from_idea(zotero_key, paper_key):
 
 
 # ============================================================
+# External Paper Search (Semantic Scholar)
+# ============================================================
+
+@app.route('/api/external-search', methods=['GET'])
+def external_search():
+    """Search for papers on Semantic Scholar"""
+    query = request.args.get('q', '').strip()
+    if not query:
+        return jsonify({"error": "Query parameter 'q' is required"}), 400
+
+    limit = request.args.get('limit', 20, type=int)
+    limit = min(max(limit, 1), 100)  # Clamp to 1-100
+
+    try:
+        # Load papers.json to get existing paper IDs
+        papers_path = Path(__file__).parent / "papers.json"
+        my_s2_ids = set()
+        my_dois = set()
+
+        if papers_path.exists():
+            with open(papers_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                papers = data.get('papers', data) if isinstance(data, dict) else data
+                for p in papers:
+                    if p.get('s2_id'):
+                        my_s2_ids.add(p['s2_id'])
+                    if p.get('doi'):
+                        my_dois.add(p['doi'].lower())
+
+        # Call Semantic Scholar Search API
+        S2_API_KEY = os.environ.get("S2_API_KEY")
+        headers = {"x-api-key": S2_API_KEY} if S2_API_KEY else {}
+
+        url = "https://api.semanticscholar.org/graph/v1/paper/search"
+        params = {
+            'query': query,
+            'limit': limit,
+            'fields': 'paperId,title,abstract,year,venue,authors,citationCount,externalIds'
+        }
+
+        resp = requests.get(url, params=params, headers=headers, timeout=30)
+
+        if resp.status_code == 429:
+            return jsonify({"error": "Rate limited by Semantic Scholar. Try again later."}), 429
+
+        if not resp.ok:
+            return jsonify({"error": f"S2 API error: {resp.status_code}"}), 502
+
+        data = resp.json()
+        results = data.get('data', [])
+
+        # Mark papers that are already in library
+        for r in results:
+            paper_id = r.get('paperId', '')
+            doi = (r.get('externalIds') or {}).get('DOI', '').lower()
+
+            r['in_library'] = (paper_id in my_s2_ids) or (doi and doi in my_dois)
+
+        return jsonify({
+            "success": True,
+            "query": query,
+            "total": data.get('total', len(results)),
+            "results": results
+        })
+
+    except requests.exceptions.Timeout:
+        return jsonify({"error": "Request to Semantic Scholar timed out"}), 504
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ============================================================
 # Helper Functions
 # ============================================================
 
