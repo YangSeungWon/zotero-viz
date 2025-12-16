@@ -195,9 +195,11 @@ function startSyncPolling() {
           }
           addSyncLog('Full Sync completed', 'success');
 
-          // Reload page after sync
+          // Reload page after sync (with cache busting)
           setTimeout(() => {
-            location.reload();
+            const url = new URL(window.location.href);
+            url.searchParams.set('_t', Date.now());
+            window.location.href = url.toString();
           }, 2000);
         }
 

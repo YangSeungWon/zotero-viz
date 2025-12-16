@@ -4,7 +4,7 @@
 
 async function loadData() {
   try {
-    const resp = await fetch('papers.json');
+    const resp = await fetch('papers.json', { cache: 'no-store' });
     const data = await resp.json();
 
     // 새 포맷 (papers 배열 + centroids) vs 기존 포맷 (배열만)
