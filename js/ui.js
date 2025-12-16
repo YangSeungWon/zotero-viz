@@ -383,7 +383,12 @@ function showFilterStatus(status) {
 // Apply filters
 function applyFilters() {
   currentFiltered = filterPapers();
-  if (currentView === 'map') {
+  const isMobileView = window.innerWidth <= MOBILE_BREAKPOINT;
+
+  if (isMobileView) {
+    // Mobile always uses list view
+    renderListView(currentFiltered);
+  } else if (currentView === 'map') {
     render(currentFiltered);
   } else if (currentView === 'list') {
     renderListView(currentFiltered);
@@ -401,6 +406,11 @@ function applyFilters() {
 
   // 검색 결과 없음 메시지
   showNoResultsMessage(currentFiltered.length === 0 && allPapers.length > 0);
+
+  // 모바일 필터 상태 바 업데이트
+  if (typeof updateMobileFilterStatus === 'function') {
+    updateMobileFilterStatus();
+  }
 }
 
 function showNoResultsMessage(show) {

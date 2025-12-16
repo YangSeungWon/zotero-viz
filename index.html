@@ -38,7 +38,8 @@
     <!-- Mobile Search Bar (visible only on mobile) -->
     <div class="mobile-search-bar" id="mobileSearchBar">
       <input type="text" id="mobileHeaderSearch" placeholder="Search...">
-      <button id="mobileSemanticToggle" class="semantic-toggle" title="Toggle semantic search"><i data-lucide="brain"></i></button>
+      <button id="mobileSearchBtn" class="mobile-search-btn" title="Text Search"><i data-lucide="search"></i></button>
+      <button id="mobileAISearchBtn" class="mobile-ai-search-btn" title="AI Search"><i data-lucide="brain"></i></button>
     </div>
     <div class="view-toggle" id="viewToggle">
       <button class="view-btn active" data-view="map">Map</button>
@@ -152,6 +153,13 @@
     </div>
 
     <div class="mobile-menu-section">
+      <h3>Cluster</h3>
+      <div class="mobile-cluster-list" id="mobileClusterList">
+        <!-- JS로 동적 생성 -->
+      </div>
+    </div>
+
+    <div class="mobile-menu-section">
       <h3>Sort</h3>
       <div class="control-group">
         <select id="mobileSortBy" style="width: 100%;">
@@ -170,8 +178,13 @@
     </div>
   </nav>
 
-  <!-- Mobile Cluster Chips -->
+  <!-- Mobile Cluster Chips (hidden on mobile, moved to menu) -->
   <div class="cluster-chips" id="mobileClusterChips"></div>
+
+  <!-- Mobile Filter Status Bar -->
+  <div class="mobile-filter-status" id="mobileFilterStatus">
+    <!-- JS로 동적 생성: 활성 필터 칩들 -->
+  </div>
 
   <div class="main-content">
     <div class="left-sidebar" id="leftSidebar">

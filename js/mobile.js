@@ -4,9 +4,6 @@
 
 const isMobile = () => window.innerWidth <= MOBILE_BREAKPOINT;
 
-// Mobile semantic search state
-let mobileSemanticEnabled = false;
-
 // Hamburger Menu
 function openMobileMenu() {
   const mobileMenu = document.getElementById('mobileMenu');
@@ -39,7 +36,7 @@ function closeBottomSheet() {
     selectedPaper = null;
     connectedPapers = new Set();
     updateUrlWithPaper(null);
-    renderList(currentFiltered);
+    renderListView(currentFiltered);
   }
 }
 
@@ -84,6 +81,7 @@ function populateMobileClusterChips() {
 }
 
 function updateMobileClusterChips() {
+  // Update mobile chips
   const chips = document.querySelectorAll('.cluster-chip');
   chips.forEach(chip => {
     if (chip.dataset.cluster) {
@@ -91,6 +89,11 @@ function updateMobileClusterChips() {
     } else {
       chip.classList.toggle('active', highlightCluster === null);
     }
+  });
+  // Sync desktop cluster panel
+  document.querySelectorAll('.cluster-item').forEach(el => {
+    const c = parseInt(el.dataset.cluster);
+    el.classList.toggle('active', highlightCluster === c);
   });
 }
 
@@ -200,40 +203,58 @@ function initMobileHandlers() {
 
   // Mobile header search
   const mobileHeaderSearch = document.getElementById('mobileHeaderSearch');
-  if (mobileHeaderSearch) {
-    mobileHeaderSearch.addEventListener('input', debounce(() => {
-      syncDesktopControls();
-      if (mobileSemanticEnabled && mobileHeaderSearch.value.trim()) {
-        // Trigger semantic search
-        const semanticToggle = document.getElementById('semanticToggle');
-        if (semanticToggle && !semanticToggle.classList.contains('active')) {
-          semanticToggle.click();
-        }
-        document.getElementById('searchFilter').value = mobileHeaderSearch.value;
-        applyFilters();
-      } else {
-        applyFilters();
-      }
-    }, DEBOUNCE_DELAY));
+  const mobileSearchBtn = document.getElementById('mobileSearchBtn');
+  const mobileAISearchBtn = document.getElementById('mobileAISearchBtn');
+
+  // 텍스트 검색 실행
+  function executeTextSearch() {
+    // 시맨틱 검색 모드 끄기
+    const desktopToggle = document.getElementById('semanticToggle');
+    if (desktopToggle && desktopToggle.classList.contains('active')) {
+      desktopToggle.click();
+    }
+    syncDesktopControls();
+    applyFilters();
   }
 
-  // Mobile semantic toggle
-  const mobileSemanticToggle = document.getElementById('mobileSemanticToggle');
-  if (mobileSemanticToggle) {
-    mobileSemanticToggle.addEventListener('click', () => {
-      mobileSemanticEnabled = !mobileSemanticEnabled;
-      mobileSemanticToggle.classList.toggle('active', mobileSemanticEnabled);
+  // AI 시맨틱 검색 실행
+  function executeAISearch() {
+    if (!mobileHeaderSearch.value.trim()) return;
 
-      // Sync with desktop semantic toggle
-      const desktopToggle = document.getElementById('semanticToggle');
-      if (desktopToggle) {
-        if (mobileSemanticEnabled !== desktopToggle.classList.contains('active')) {
-          desktopToggle.click();
-        }
+    // 시맨틱 검색 모드 켜기
+    const desktopToggle = document.getElementById('semanticToggle');
+    if (desktopToggle && !desktopToggle.classList.contains('active')) {
+      desktopToggle.click();
+    }
+    document.getElementById('searchFilter').value = mobileHeaderSearch.value;
+    syncDesktopControls();
+    applyFilters();
+  }
+
+  if (mobileHeaderSearch) {
+    // Enter 키 = 텍스트 검색
+    mobileHeaderSearch.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        executeTextSearch();
+        mobileHeaderSearch.blur();
       }
+    });
+  }
 
-      // Update placeholder
-      mobileHeaderSearch.placeholder = mobileSemanticEnabled ? 'AI Search...' : 'Search...';
+  // 텍스트 검색 버튼
+  if (mobileSearchBtn) {
+    mobileSearchBtn.addEventListener('click', () => {
+      executeTextSearch();
+      mobileHeaderSearch?.blur();
+    });
+  }
+
+  // AI 검색 버튼
+  if (mobileAISearchBtn) {
+    mobileAISearchBtn.addEventListener('click', () => {
+      executeAISearch();
+      mobileHeaderSearch?.blur();
     });
   }
 
@@ -258,7 +279,7 @@ function initMobileHandlers() {
   if (mobileSortBy) {
     mobileSortBy.addEventListener('change', () => {
       syncDesktopControls();
-      renderList(currentFiltered);
+      renderListView(currentFiltered);
     });
   }
 
@@ -266,10 +287,7 @@ function initMobileHandlers() {
   if (mobileResetFilter) {
     mobileResetFilter.addEventListener('click', () => {
       document.getElementById('resetFilter')?.click();
-      mobileHeaderSearch.value = '';
-      mobileSemanticEnabled = false;
-      mobileSemanticToggle?.classList.remove('active');
-      mobileHeaderSearch.placeholder = 'Search...';
+      if (mobileHeaderSearch) mobileHeaderSearch.value = '';
       syncMobileControls();
       closeMobileMenu();
     });
@@ -289,4 +307,179 @@ function initMobileHandlers() {
       closeBottomSheet();
     }
   }, 250));
+}
+
+/* ===========================================
+   Mobile Filter Status Bar
+   =========================================== */
+
+// 필터 상태 바에 현재 활성 필터들을 표시
+function updateMobileFilterStatus() {
+  const container = document.getElementById('mobileFilterStatus');
+  if (!container) return;
+
+  const chips = [];
+
+  // 검색어
+  const searchValue = document.getElementById('searchFilter')?.value?.trim();
+  if (searchValue) {
+    chips.push({
+      type: 'search',
+      label: `"${searchValue.length > 15 ? searchValue.slice(0, 15) + '...' : searchValue}"`,
+      clear: () => {
+        document.getElementById('searchFilter').value = '';
+        document.getElementById('mobileHeaderSearch').value = '';
+        applyFilters();
+      }
+    });
+  }
+
+  // 클러스터
+  if (highlightCluster !== null) {
+    const label = clusterLabels[highlightCluster] || `Cluster ${highlightCluster}`;
+    chips.push({
+      type: 'cluster',
+      label: label.length > 12 ? label.slice(0, 12) + '..' : label,
+      clear: () => {
+        highlightCluster = null;
+        updateMobileClusterList();
+        document.querySelectorAll('.cluster-item').forEach(el => el.classList.remove('active'));
+        applyFilters();
+      }
+    });
+  }
+
+  // 태그
+  const tagValue = document.getElementById('tagFilter')?.value;
+  if (tagValue) {
+    chips.push({
+      type: 'tag',
+      label: `#${tagValue}`,
+      clear: () => {
+        document.getElementById('tagFilter').value = '';
+        document.getElementById('mobileTagFilter').value = '';
+        applyFilters();
+      }
+    });
+  }
+
+  // 북마크
+  if (document.getElementById('bookmarkedOnly')?.checked) {
+    chips.push({
+      type: 'bookmark',
+      label: '★ Bookmarked',
+      clear: () => {
+        document.getElementById('bookmarkedOnly').checked = false;
+        document.getElementById('mobileBookmarkedOnly').checked = false;
+        applyFilters();
+      }
+    });
+  }
+
+  // 연도 범위
+  if (yearRange) {
+    chips.push({
+      type: 'year',
+      label: `${yearRange.min}-${yearRange.max}`,
+      clear: () => {
+        yearRange = null;
+        if (typeof clearMiniTimelineBrush === 'function') {
+          clearMiniTimelineBrush();
+        }
+        applyFilters();
+      }
+    });
+  }
+
+  // 렌더링
+  if (chips.length === 0) {
+    container.innerHTML = '';
+    container.classList.remove('has-filters');
+    return;
+  }
+
+  container.innerHTML = chips.map((c, i) => `
+    <span class="mobile-filter-chip" data-index="${i}">
+      ${c.label}
+      <span class="remove">×</span>
+    </span>
+  `).join('');
+
+  // 클로저로 chips 배열 캡처하여 이벤트 바인딩
+  const chipsCopy = [...chips];
+  container.querySelectorAll('.mobile-filter-chip').forEach((el, i) => {
+    el.querySelector('.remove').onclick = (e) => {
+      e.stopPropagation();
+      chipsCopy[i].clear();
+    };
+  });
+
+  container.classList.add('has-filters');
+}
+
+/* ===========================================
+   Mobile Menu Cluster List
+   =========================================== */
+
+// 메뉴 내 클러스터 리스트 생성
+function populateMobileClusterList() {
+  const container = document.getElementById('mobileClusterList');
+  if (!container) return;
+
+  const clusters = [...new Set(allPapers.map(p => p.cluster))].sort((a, b) => a - b);
+
+  // 클러스터별 논문 개수 계산
+  const clusterCounts = {};
+  allPapers.forEach(p => {
+    if (p.has_notes) {  // 노트가 있는 논문만 카운트
+      clusterCounts[p.cluster] = (clusterCounts[p.cluster] || 0) + 1;
+    }
+  });
+
+  const totalCount = allPapers.filter(p => p.has_notes).length;
+
+  container.innerHTML = `
+    <div class="mobile-cluster-item ${highlightCluster === null ? 'active' : ''}" data-cluster="">
+      <span class="mobile-cluster-label">All Clusters</span>
+      <span class="mobile-cluster-count">${totalCount}</span>
+    </div>
+    ${clusters.map(c => {
+      const label = clusterLabels[c] || `Cluster ${c}`;
+      const color = CLUSTER_COLORS[c % CLUSTER_COLORS.length];
+      return `
+        <div class="mobile-cluster-item ${highlightCluster === c ? 'active' : ''}" data-cluster="${c}">
+          <span class="mobile-cluster-dot" style="background: ${color}"></span>
+          <span class="mobile-cluster-label">${label}</span>
+          <span class="mobile-cluster-count">${clusterCounts[c] || 0}</span>
+        </div>
+      `;
+    }).join('')}
+  `;
+
+  // 이벤트 바인딩
+  container.querySelectorAll('.mobile-cluster-item').forEach(el => {
+    el.onclick = () => {
+      const c = el.dataset.cluster;
+      highlightCluster = c === '' ? null : parseInt(c);
+      updateMobileClusterList();
+      // 데스크톱 클러스터 패널도 동기화
+      document.querySelectorAll('.cluster-item').forEach(item => {
+        const itemCluster = parseInt(item.dataset.cluster);
+        item.classList.toggle('active', highlightCluster === itemCluster);
+      });
+      applyFilters();
+      closeMobileMenu();  // 선택 후 메뉴 닫기
+    };
+  });
+}
+
+// 클러스터 리스트 active 상태 업데이트
+function updateMobileClusterList() {
+  const items = document.querySelectorAll('.mobile-cluster-item');
+  items.forEach(el => {
+    const c = el.dataset.cluster;
+    const isActive = (c === '' && highlightCluster === null) ||
+                     (c !== '' && highlightCluster === parseInt(c));
+    el.classList.toggle('active', isActive);
+  });
 }

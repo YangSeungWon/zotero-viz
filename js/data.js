@@ -124,7 +124,10 @@ async function loadData() {
         mobileTagFilter.appendChild(opt);
       });
     }
-    populateMobileClusterChips();
+    // 모바일 클러스터 리스트 (메뉴 내)
+    if (typeof populateMobileClusterList === 'function') {
+      populateMobileClusterList();
+    }
   } catch (e) {
     document.getElementById('stats').textContent = 'Error loading papers.json';
     console.error(e);
@@ -149,6 +152,8 @@ function filterPapers() {
       if (p.venue_quality < minVenue) return false;
       if (papersOnly && !p.is_paper) return false;
       if (bookmarkedOnly && !bookmarkedPapers.has(p.id)) return false;
+      // Cluster filter
+      if (highlightCluster !== null && p.cluster !== highlightCluster) return false;
       if (tagFilter) {
         const paperTags = (p.tags || '').split(/[;,]/).map(t => t.trim().toLowerCase());
         if (!paperTags.includes(tagFilter.toLowerCase())) return false;
@@ -176,6 +181,8 @@ function filterPapers() {
     if (p.venue_quality < minVenue) return false;
     if (papersOnly && !p.is_paper) return false;
     if (bookmarkedOnly && !bookmarkedPapers.has(p.id)) return false;
+    // Cluster filter
+    if (highlightCluster !== null && p.cluster !== highlightCluster) return false;
     if (tagFilter) {
       const paperTags = (p.tags || '').split(/[;,]/).map(t => t.trim().toLowerCase());
       if (!paperTags.includes(tagFilter.toLowerCase())) return false;

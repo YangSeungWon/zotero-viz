@@ -49,11 +49,10 @@ function initApp() {
       initMiniTimelineBrush();
     }
 
-    // Restore saved view
+    // Restore saved view (default to 'map', mobile will auto-switch to list)
     const savedView = localStorage.getItem('currentView');
-    if (savedView && ['map', 'list', 'timeline'].includes(savedView)) {
-      switchView(savedView);
-    }
+    const viewToUse = (savedView && ['map', 'list', 'timeline'].includes(savedView)) ? savedView : 'map';
+    switchView(viewToUse);
 
     // Check URL for paper parameter (zotero_key) and open if present
     const paperKeyFromUrl = getPaperKeyFromUrl();

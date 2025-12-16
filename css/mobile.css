@@ -289,14 +289,18 @@
     order: 100;
   }
 
-  .mobile-menu,
-  .mobile-menu-overlay {
+  .mobile-menu {
+    display: block;
+  }
+
+  .mobile-menu-overlay.active {
     display: block;
   }
 
   .controls,
   .legend,
   .filter-status,
+  .filter-chips,
   .header-dropdown,
   #showGlobalStats,
   #copyClusters,
@@ -362,6 +366,38 @@
     height: 18px;
   }
 
+  .mobile-search-btn,
+  .mobile-ai-search-btn {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    border: none;
+  }
+
+  .mobile-search-btn,
+  .mobile-ai-search-btn {
+    border: 1px solid var(--border-color) !important;
+    background: var(--bg-tertiary) !important;
+    color: var(--text-secondary) !important;
+  }
+
+  .mobile-search-btn:active,
+  .mobile-ai-search-btn:active {
+    opacity: 0.8;
+  }
+
+  .mobile-search-btn svg,
+  .mobile-ai-search-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
   /* Hide mobile legend (no map view) */
   .mobile-legend {
     display: none !important;
@@ -374,6 +410,8 @@
   .main-content {
     flex-direction: column;
     height: calc(100vh - 56px - env(safe-area-inset-top, 0px));
+    min-height: 0;
+    overflow: hidden;
   }
 
   .cluster-panel,
@@ -383,38 +421,61 @@
   }
 
   .cluster-chips {
-    display: flex;
+    display: none !important;  /* 모바일에서 숨김, 메뉴로 이동 */
   }
 
-  /* Hide plot container on mobile - List only */
-  .plot-container {
-    display: none !important;
-  }
-
+  /* Hide map/timeline on mobile - List only */
   #plot,
   #timelinePlot,
   .mini-timeline {
     display: none !important;
   }
 
+  .plot-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
   /* List view always visible on mobile */
   .list-view {
     display: flex !important;
-    position: relative;
+    flex-direction: column;
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
     flex: 1;
     width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .list-view .list-header {
     padding: 8px 12px;
+    flex-shrink: 0;
   }
 
   .list-view .list-header .list-sort {
-    display: none;
+    display: flex;  /* 모바일에서도 정렬 표시 */
+  }
+
+  .list-view .list-header .list-sort select {
+    padding: 4px 8px;
+    font-size: 12px;
   }
 
   .list-view .list-container {
     padding: 8px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 
   .list-view .list-item {
@@ -478,4 +539,110 @@
   .bottom-sheet-close:active {
     opacity: 0.7;
   }
+}
+
+/* ===========================================
+   Mobile Filter Status Bar
+   =========================================== */
+
+.mobile-filter-status {
+  display: none;  /* 기본 숨김, JS로 has-filters 추가 시 표시 */
+}
+
+@media (max-width: 768px) {
+  .mobile-filter-status {
+    display: none;
+    padding: 8px 12px;
+    gap: 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+  }
+
+  .mobile-filter-status.has-filters {
+    display: flex;
+  }
+
+  .mobile-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: var(--accent-bg);
+    border: 1px solid var(--accent);
+    border-radius: 16px;
+    font-size: 12px;
+    color: var(--accent);
+    white-space: nowrap;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  .mobile-filter-chip:active {
+    opacity: 0.7;
+  }
+
+  .mobile-filter-chip .remove {
+    font-size: 14px;
+    font-weight: bold;
+    margin-left: 2px;
+    opacity: 0.7;
+  }
+}
+
+/* ===========================================
+   Mobile Menu Cluster List
+   =========================================== */
+
+.mobile-cluster-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.mobile-cluster-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.mobile-cluster-item:active {
+  opacity: 0.7;
+}
+
+.mobile-cluster-item.active {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+}
+
+.mobile-cluster-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.mobile-cluster-label {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-cluster-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
 }
