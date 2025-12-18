@@ -645,7 +645,7 @@ function showHoverPreview(item) {
     ${isIsolated ? `<span class="badge" style="background: #6b728033; color: #6b7280;"><i data-lucide="unplug" style="width:12px;height:12px;vertical-align:middle;margin-right:2px;"></i>Isolated</span>` : ''}
     <br><br>
     <span><strong>Year:</strong> ${item.year || 'N/A'}</span>
-    <span><strong>Venue:</strong> ${item.venue || 'N/A'}</span>
+    <span title="${item.venue_full || item.venue || ''}"><strong>Venue:</strong> ${item.venue || 'N/A'}</span>
     ${item.authors ? `<br><span><strong>Authors:</strong> ${item.authors.substring(0, 80)}${item.authors.length > 80 ? '...' : ''}</span>` : ''}
   `;
 
@@ -729,7 +729,8 @@ function showDetail(item) {
 
   // Meta - compact list view style
   const clusterColor = CLUSTER_COLORS[item.cluster % CLUSTER_COLORS.length];
-  const venueAbbrev = typeof abbreviateVenue === 'function' ? abbreviateVenue(item.venue) : (item.venue || '');
+  const venueDisplay = item.venue || '';
+  const venueFull = item.venue_full || item.venue || '';
   const authorsAbbrev = typeof abbreviateAuthors === 'function' ? abbreviateAuthors(item.authors) : (item.authors?.split(/[,;]/)[0] || '');
 
   document.getElementById('detailMeta').innerHTML = `
@@ -737,7 +738,7 @@ function showDetail(item) {
       <span class="detail-year">${item.year || '?'}</span>
       <span class="detail-cluster" style="background: ${clusterColor};">${item.cluster_label || 'C' + item.cluster}</span>
       <span class="detail-authors">${authorsAbbrev}</span>
-      <span class="detail-venue" title="${item.venue || ''}">${venueAbbrev}</span>
+      <span class="detail-venue" title="${venueFull}">${venueDisplay}</span>
     </div>
     <div class="detail-stats">
       ${item.citation_count ? `<span class="detail-stat" title="Total citations"><i data-lucide="quote"></i> ${item.citation_count}</span>` : ''}
@@ -822,7 +823,7 @@ function showMobileDetail(item) {
     ${item.citation_count ? `<span class="badge" style="background: #ffd70033; color: #ffd700;">${item.citation_count} cited</span>` : ''}
     <br><br>
     <span><strong>Year:</strong> ${item.year || 'N/A'}</span>
-    <span><strong>Venue:</strong> ${item.venue || 'N/A'}</span>
+    <span title="${item.venue_full || item.venue || ''}"><strong>Venue:</strong> ${item.venue || 'N/A'}</span>
     ${item.authors ? `<br><span style="font-size: 11px;"><strong>Authors:</strong> ${item.authors.substring(0, 60)}${item.authors.length > 60 ? '...' : ''}</span>` : ''}
   `;
 

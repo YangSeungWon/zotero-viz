@@ -92,7 +92,7 @@ function renderListView(papers) {
             <span class="list-item-year">${paper.year || '?'}</span>
             <span class="list-item-cluster" style="background: ${clusterColor}; color: black;">${clusterLabel}</span>
             <span class="list-item-authors" title="${escapeHtml(paper.authors || '')}">${escapeHtml(abbreviateAuthors(paper.authors))}</span>
-            <span class="list-item-venue" title="${escapeHtml(paper.venue || '')}">${escapeHtml(abbreviateVenue(paper.venue))}</span>
+            <span class="list-item-venue" title="${escapeHtml(paper.venue_full || paper.venue || '')}">${escapeHtml(paper.venue || '')}</span>
           </div>
         </div>
         <div class="list-item-meta">
