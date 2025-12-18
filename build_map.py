@@ -92,7 +92,211 @@ VENUE_TIER2 = [
     "creativity and cognition",
     "mobile and ubiquitous multimedia",
 ]
-VENUE_TIER3 = ["extended abstract", "chi ea", "tei", "tangible, embedded", "workshop", "poster", "adjunct"]
+VENUE_TIER3 = ["extended abstract", "chi ea", "tei", "tangible, embedded", "workshop", "poster", "adjunct", "companion"]
+
+# ACM 컨퍼런스 약자 매핑 (패턴 -> 약자)
+# 순서 중요: 더 구체적인 패턴(EA, Companion)이 먼저 와야 함
+ACM_VENUE_ABBREV = {
+    # Extended Abstracts / Companion (must come first!)
+    "extended abstracts.*human factors": "CHI EA",
+    "chi.*extended abstracts": "CHI EA",
+    "extended abstracts.*chi": "CHI EA",
+    "adjunct.*pervasive.*ubiquitous": "UbiComp Adjunct",
+    "adjunct.*ubicomp": "UbiComp Adjunct",
+    "companion.*computer-human interaction in play": "CHI PLAY Companion",
+    "companion.*computer supported cooperative": "CSCW Companion",
+    "companion.*designing interactive systems": "DIS Companion",
+
+    # Top HCI venues
+    "human factors in computing systems": "CHI",
+    "user interface software and technology": "UIST",
+    "ubiquitous computing": "UbiComp",
+    "interact. mob. wearable ubiquitous": "IMWUT",
+    "computer supported cooperative work": "CSCW",
+    "designing interactive systems": "DIS",
+    "tangible.* embedded.* embodied": "TEI",
+    "intelligent user interface": "IUI",
+    "multimodal interact": "ICMI",
+    "human-robot interaction": "HRI",
+    "creativity and cognition": "C&C",
+    "mobile.* human.* computer.* interact": "MobileHCI",
+    "mobile devices and services": "MobileHCI",
+    "virtual reality software and technology": "VRST",
+    "spatial user interaction": "SUI",
+    "symposium on applied perception": "SAP",
+    "eye tracking research": "ETRA",
+    "engineering interactive computing": "EICS",
+    "computers and accessibility": "ASSETS",
+    "recommender systems": "RecSys",
+    "fairness.* accountability.* transparency": "FAccT",
+    "augmented humans": "AHs",
+    "australian.*human.*computer": "OzCHI",
+    "nordic.*human.*computer": "NordiCHI",
+    "computer.*human.*interaction.*play": "CHI PLAY",
+    r"proc\.?\s*acm.*hum.*comput.*interact": "PACM HCI",
+    r"acm.*hum.*comput.*interact": "PACM HCI",
+    "human information interaction.* retrieval": "CHIIR",
+    "conversational user interf": "CUI",
+    "interaction design and children": "IDC",
+    "interactive media experience": "IMX",
+    r"acm trans.*inf.*syst": "TOIS",
+    r"acm trans.*comput.*hum.*interact": "TOCHI",
+    r"trans.*comput.*hum.*interact": "TOCHI",
+    r"acm trans.*graph": "TOG",
+    "user modeling.*user.*adapted": "UMUAI",
+    "international journal.*human.*computer": "IJHCS",
+    "journal of computer-mediated": "JCMC",
+    "human.*computer interaction$": "HCI Journal",
+    "communications of the acm": "CACM",
+    "pervasive.* mobile.* computing": "PMC",
+
+    # Graphics & Games
+    "computer graphics and interactive techniques": "SIGGRAPH",
+    "interactive 3d graphics": "I3D",
+    "non-photorealistic animation": "NPAR",
+    "computer animation": "SCA",
+    "motion.* games": "MIG",
+    "high performance graphics": "HPG",
+
+    # Systems & Architecture
+    "operating systems principles": "SOSP",
+    "architectural support for programming": "ASPLOS",
+    "computer architecture": "ISCA",
+    "microarchitecture": "MICRO",
+    "mobile computing and networking": "MobiCom",
+    "mobile systems.* applications": "MobiSys",
+    "mobile ad hoc networking": "MobiHoc",
+    "embedded network.* sensor": "SenSys",
+    "high performance distributed": "HPDC",
+    "supercomputing": "SC",
+    "international conference on supercomputing": "ICS",
+    "parallel.* distributed.* simulation": "PADS",
+    "autonomic computing": "ICAC",
+
+    # Networking
+    "sigcomm": "SIGCOMM",
+    "data communication": "SIGCOMM",
+    "internet measurement": "IMC",
+    "emerging networking experiments": "CoNEXT",
+    "network and operating systems support for digital": "NOSSDAV",
+
+    # Databases & IR
+    "management of data": "SIGMOD",
+    "principles of database": "PODS",
+    "information and knowledge management": "CIKM",
+    "research.* development.* information retrieval": "SIGIR",
+    "web search and data mining": "WSDM",
+    "knowledge discovery and data mining": "KDD",
+    "digital libraries": "JCDL",
+    "hypertext and hypermedia": "HT",
+    "document engineering": "DocEng",
+
+    # Programming Languages & Software Engineering
+    "programming language design": "PLDI",
+    "principles of programming languages": "POPL",
+    "functional programming": "ICFP",
+    "object.* oriented programming": "OOPSLA",
+    "software engineering": "ICSE",
+    "foundations of software engineering": "FSE",
+    "automated software engineering": "ASE",
+    "software testing and analysis": "ISSTA",
+    "code generation and optimization": "CGO",
+    "certified programs and proofs": "CPP",
+    "generative programming": "GPCE",
+
+    # Theory & Algorithms
+    "theory of computing": "STOC",
+    "discrete algorithms": "SODA",
+    "principles of distributed computing": "PODC",
+    "parallel algorithms and architectures": "SPAA",
+    "parallel.* practice of parallel": "PPoPP",
+    "genetic and evolutionary computation": "GECCO",
+
+    # Security & Privacy
+    "computer and communications security": "CCS",
+    "information.* computer.* communications security": "ASIACCS",
+    "data and application security": "CODASPY",
+    "access control models": "SACMAT",
+    "security.* privacy.* wireless": "WiSec",
+    "information hiding.* multimedia security": "IH&MMSec",
+
+    # Design Automation & VLSI
+    "design automation conference": "DAC",
+    "computer-aided design": "ICCAD",
+    "physical design": "ISPD",
+    "low power electronics": "ISLPED",
+    "field.* programmable gate arrays": "FPGA",
+    "great lakes.* vlsi": "GLSVLSI",
+    "integrated circuits and system design": "SBCCI",
+
+    # Multimedia
+    "multimedia conference": "MM",
+    "multimedia retrieval": "ICMR",
+
+    # Web
+    "world wide web": "WWW",
+    "the web conference": "WWW",
+    "web science": "WebSci",
+    "3d.* web": "Web3D",
+
+    # Education
+    "computer science education": "SIGCSE",
+    "innovation and technology in computer science education": "ITiCSE",
+    "computing education research": "ICER",
+    "information technology education": "SIGITE",
+
+    # Other
+    "economics and computation": "EC",
+    "measurement and modeling": "SIGMETRICS",
+    "performance engineering": "ICPE",
+    "group.* work": "GROUP",
+    "distributed event": "DEBS",
+    "middleware": "Middleware",
+    "computing frontiers": "CF",
+    "bioinformatics.* computational biology": "BCB",
+    "geographic information": "SIGSPATIAL",
+    "collective intelligence": "CI",
+    "knowledge capture": "K-CAP",
+    "applied computing": "SAC",
+    "cyber.* physical": "CPSWeek",
+    "energy.* efficient.* built": "BuildSys",
+
+    # IEEE Conferences
+    "ieee.*virtual reality": "IEEE VR",
+    "ieee.*mixed.*augmented reality": "IEEE ISMAR",
+    "ieee.*visualization": "IEEE VIS",
+    "ieee.*big data": "IEEE Big Data",
+    "ieee.*intelligent vehicles": "IEEE IV",
+    "ieee.*robot.*automation": "IEEE ICRA",
+    "ieee.*intelligent robots": "IEEE IROS",
+    "ieee.*pervasive computing": "IEEE PerCom",
+    "ieee.*affective computing": "IEEE ACII",
+    "ieee.*haptics": "IEEE Haptics",
+}
+
+def get_venue_abbrev(venue: str) -> str:
+    """긴 venue 이름을 약자로 변환"""
+    if not venue:
+        return ""
+
+    venue_lower = venue.lower()
+
+    # 연도 추출 (있으면)
+    year_match = re.search(r'\b(19|20)\d{2}\b', venue)
+    year = year_match.group(0) if year_match else ""
+
+    # 패턴 매칭
+    for pattern, abbrev in ACM_VENUE_ABBREV.items():
+        if re.search(pattern, venue_lower):
+            return f"{abbrev} {year}".strip() if year else abbrev
+
+    # 매칭 안 되면 원본 (너무 길면 자름)
+    if len(venue) > 50:
+        # "Proceedings of the 20th" 같은 패턴 제거
+        venue = re.sub(r'^proceedings of (the )?(\d+(st|nd|rd|th)\s+)?(annual\s+)?(acm\s+)?(international\s+)?', '', venue, flags=re.IGNORECASE)
+        if len(venue) > 50:
+            venue = venue[:47] + "..."
+    return venue
 
 # Item type 점수
 TYPE_SCORE = {
@@ -699,7 +903,8 @@ def main():
             "title": title,
             "year": int(row["year_clean"]) if pd.notna(row["year_clean"]) else None,
             "authors": str(row.get("Author", "") or ""),
-            "venue": str(row.get("Publication Title", "") or row.get("Proceedings Title", "") or row.get("Conference Name", "") or ""),
+            "venue": get_venue_abbrev(venue_full := str(row.get("Publication Title", "") or row.get("Proceedings Title", "") or row.get("Conference Name", "") or "")),
+            "venue_full": venue_full,
             "item_type": str(row.get("Item Type", "") or ""),
             "is_paper": bool(row["is_paper"]),
             "venue_quality": float(row["venue_quality"]),
